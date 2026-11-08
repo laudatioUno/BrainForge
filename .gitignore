@@ -8,3 +8,7 @@
 /build/
 
 .DS_Store
+
+# Settings written by the admin area (mail server, password)
+/data/einstellungen.php
+/data/einstellungen.php.tmp

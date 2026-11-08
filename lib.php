@@ -6,7 +6,18 @@ require __DIR__ . '/version.php';
 
 date_default_timezone_set('Europe/Zurich');
 session_name('flaggenquiz');
+session_set_cookie_params([
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Lax',
+    'secure' => (($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off'),
+]);
 session_start();
+
+require __DIR__ . '/inc/einstellungen.php';
+require __DIR__ . '/inc/mail.php';
+require __DIR__ . '/inc/avatar.php';
+require __DIR__ . '/inc/profil.php';
 
 /*
  * ---- Sprache ----
@@ -709,15 +720,14 @@ function db(): PDO
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         $pdo->exec('PRAGMA busy_timeout = 5000');
+        $pdo->exec('PRAGMA foreign_keys = ON');
         $hatTabelle = (bool)$pdo->query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'resultate'")->fetchColumn();
         if (!$hatTabelle) {
-            // Neue Installation: gleich im aktuellen Aufbau anlegen, kein Update nötig
+            // Neue Installation: Grundtabelle anlegen und alle Updates sofort ausführen (ohne GO)
             $pdo->exec('CREATE TABLE resultate (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 zeit TEXT NOT NULL,
                 name TEXT NOT NULL,
-                spielart TEXT NOT NULL DEFAULT \'flaggen\',
-                stufe TEXT NOT NULL DEFAULT \'\',
                 modus TEXT NOT NULL,
                 anzahl INTEGER NOT NULL,
                 land_richtig INTEGER NOT NULL,
@@ -728,8 +738,8 @@ function db(): PDO
                 dauer_sek INTEGER NOT NULL,
                 details TEXT NOT NULL
             )');
-            $pdo->exec('CREATE INDEX IF NOT EXISTS idx_rangliste ON resultate (spielart, stufe, modus)');
-            $pdo->exec('PRAGMA user_version = ' . DB_VERSION);
+            $pdo->exec('PRAGMA user_version = 1');
+            db_migrieren($pdo);
         }
     }
     return $pdo;
@@ -737,10 +747,76 @@ function db(): PDO
 
 /*
  * ---- Datenbank-Version und Update ----
- * Version 1: ursprüngliche Tabelle (nur Flaggen)
- * Version 2: Spalten "spielart" (flaggen/umrisse) und "stufe" (leicht/mittel/schwer)
+ * Jede Version ist ein Schritt; ein bestehende Datenbank wird über die Seite update.php
+ * (mit Sicherungskopie) Schritt für Schritt nachgeführt.
  */
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+
+/** Die Update-Schritte: Version => [Beschreibung, Funktion]. */
+function db_schritte(): array
+{
+    return [
+        2 => ['Spielart und Stufe für die Umrisse', function (PDO $p): void {
+            $spalten = array_column($p->query('PRAGMA table_info(resultate)')->fetchAll(), 'name');
+            if (!in_array('spielart', $spalten, true)) {
+                $p->exec("ALTER TABLE resultate ADD COLUMN spielart TEXT NOT NULL DEFAULT 'flaggen'");
+            }
+            if (!in_array('stufe', $spalten, true)) {
+                $p->exec("ALTER TABLE resultate ADD COLUMN stufe TEXT NOT NULL DEFAULT ''");
+            }
+            $p->exec('CREATE INDEX IF NOT EXISTS idx_rangliste ON resultate (spielart, stufe, modus)');
+        }],
+        3 => ['Profile und angemeldete Geräte', function (PDO $p): void {
+            $p->exec('CREATE TABLE IF NOT EXISTS profile (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                avatar TEXT NOT NULL,
+                sprache TEXT NOT NULL DEFAULT \'de\',
+                link_hash TEXT NOT NULL UNIQUE,
+                erstellt TEXT NOT NULL,
+                letzte_anmeldung TEXT
+            )');
+            $p->exec('CREATE INDEX IF NOT EXISTS idx_profile_email ON profile (email)');
+            $p->exec('CREATE TABLE IF NOT EXISTS geraete (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profil_id INTEGER NOT NULL REFERENCES profile(id) ON DELETE CASCADE,
+                token_hash TEXT NOT NULL UNIQUE,
+                erstellt TEXT NOT NULL,
+                zuletzt TEXT NOT NULL
+            )');
+            $p->exec('CREATE TABLE IF NOT EXISTS drossel (
+                schluessel TEXT NOT NULL,
+                zeit INTEGER NOT NULL
+            )');
+            $p->exec('CREATE INDEX IF NOT EXISTS idx_drossel ON drossel (schluessel, zeit)');
+            $spalten = array_column($p->query('PRAGMA table_info(resultate)')->fetchAll(), 'name');
+            if (!in_array('profil_id', $spalten, true)) {
+                $p->exec('ALTER TABLE resultate ADD COLUMN profil_id INTEGER');
+            }
+            $p->exec('CREATE INDEX IF NOT EXISTS idx_resultate_profil ON resultate (profil_id)');
+        }],
+    ];
+}
+
+/** Führt alle fehlenden Schritte aus (in einer Transaktion). */
+function db_migrieren(PDO $pdo): void
+{
+    $ist = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
+    $pdo->beginTransaction();
+    try {
+        foreach (db_schritte() as $version => [, $schritt]) {
+            if ($version > $ist) {
+                $schritt($pdo);
+                $pdo->exec('PRAGMA user_version = ' . (int)$version);
+            }
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
 
 function db_version(): int
 {
@@ -752,10 +828,22 @@ function update_noetig(): bool
     return db_version() < DB_VERSION;
 }
 
+/** Beschreibungen der noch fehlenden Update-Schritte. */
+function update_schritte_offen(): array
+{
+    $ist = db_version();
+    $offen = [];
+    foreach (db_schritte() as $version => [$text]) {
+        if ($version > $ist) {
+            $offen[] = $text;
+        }
+    }
+    return $offen;
+}
+
 /**
  * Bringt eine bestehende Datenbank auf den aktuellen Stand.
- * Vorher wird eine Sicherungskopie im Ordner data/ angelegt.
- * Bestehende Resultate bleiben erhalten und zählen als Spielart "Flaggen".
+ * Vorher wird eine Sicherungskopie im Ordner data/ angelegt; alle Resultate bleiben erhalten.
  * Gibt den Dateinamen der Sicherung zurück.
  */
 function db_update(): string
@@ -770,23 +858,7 @@ function db_update(): string
             throw new RuntimeException(t('Sicherungskopie konnte nicht angelegt werden (Ordner data/ beschreibbar?).'));
         }
     }
-
-    $pdo->beginTransaction();
-    try {
-        $spalten = array_column($pdo->query('PRAGMA table_info(resultate)')->fetchAll(), 'name');
-        if (!in_array('spielart', $spalten, true)) {
-            $pdo->exec("ALTER TABLE resultate ADD COLUMN spielart TEXT NOT NULL DEFAULT 'flaggen'");
-        }
-        if (!in_array('stufe', $spalten, true)) {
-            $pdo->exec("ALTER TABLE resultate ADD COLUMN stufe TEXT NOT NULL DEFAULT ''");
-        }
-        $pdo->exec('CREATE INDEX IF NOT EXISTS idx_rangliste ON resultate (spielart, stufe, modus)');
-        $pdo->exec('PRAGMA user_version = ' . DB_VERSION);
-        $pdo->commit();
-    } catch (Throwable $e) {
-        $pdo->rollBack();
-        throw $e;
-    }
+    db_migrieren($pdo);
     return basename($sicherung);
 }
 
@@ -824,10 +896,12 @@ function kombi_aus(array $quelle, array $standard = ['flaggen', '', 'kurz']): ar
  */
 function rangliste(string $spielart, string $stufe, string $modus): array
 {
-    $st = db()->prepare('SELECT id, zeit, name, spielart, stufe, modus, anzahl, land_richtig, haupt_richtig,
-        punkte, max_punkte, prozent, dauer_sek
-        FROM resultate WHERE spielart = ? AND stufe = ? AND modus = ?
-        ORDER BY prozent DESC, dauer_sek ASC, id ASC');
+    $st = db()->prepare('SELECT r.id, r.zeit, COALESCE(p.name, r.name) AS name, r.profil_id, p.avatar,
+        r.spielart, r.stufe, r.modus, r.anzahl, r.land_richtig, r.haupt_richtig,
+        r.punkte, r.max_punkte, r.prozent, r.dauer_sek
+        FROM resultate r LEFT JOIN profile p ON p.id = r.profil_id
+        WHERE r.spielart = ? AND r.stufe = ? AND r.modus = ?
+        ORDER BY r.prozent DESC, r.dauer_sek ASC, r.id ASC');
     $st->execute([$spielart, $spielart === 'umrisse' ? $stufe : '', $modus]);
     $zeilen = $st->fetchAll();
     $vorher = null;
@@ -838,6 +912,15 @@ function rangliste(string $spielart, string $stufe, string $modus): array
     }
     unset($z);
     return $zeilen;
+}
+
+/** Name in Ranglisten: mit Profil-Icon, oder als Gast markiert. */
+function spieler_name(array $z): string
+{
+    if (!empty($z['profil_id']) && !empty($z['avatar'])) {
+        return '<span class="spieler">' . avatar_svg($z['avatar'], 22) . h($z['name']) . '</span>';
+    }
+    return '<span class="spieler">' . h($z['name']) . ' <span class="gast">' . h(t('Gast')) . '</span></span>';
 }
 
 /** Gibt eine Ranglisten-Tabelle aus; die Zeile mit $markiert wird hervorgehoben. */
@@ -858,7 +941,7 @@ function rangliste_tabelle(array $zeilen, string $spielart, ?int $markiert = nul
         $medaille = ['', '🥇', '🥈', '🥉'][(int)$z['rang']] ?? '';
         echo '<tr' . ($m ? ' class="markiert"' : '') . '>'
             . '<td class="r rang">' . ($medaille ?: (int)$z['rang'] . '.') . '</td>'
-            . '<td>' . h($z['name']) . ($m ? ' <span class="du">' . h($badge) . '</span>' : '') . '</td>'
+            . '<td>' . spieler_name($z) . ($m ? ' <span class="du">' . h($badge) . '</span>' : '') . '</td>'
             . ($umrisse
                 ? '<td>' . (int)$z['land_richtig'] . '/' . (int)$z['anzahl'] . '</td>'
                 : '<td>' . (int)$z['land_richtig'] . '/' . (int)$z['anzahl'] . '</td>'
@@ -894,8 +977,19 @@ function kopf(string $titel): void
         . '<main>';
 }
 
-/** Platz rechts in der Kopfzeile vor den Umschaltern (z. B. für das Profil). */
+/** Rechts in der Kopfzeile: angemeldetes Profil oder «Profil erstellen». */
 function kopf_rechts(): string
+{
+    $p = profil();
+    if ($p !== null) {
+        return '<a class="profil-chip" href="profil.php">' . avatar_svg($p['avatar'], 30)
+            . '<span class="profil-name">' . h($p['name']) . '</span>' . kopf_extra($p) . '</a>';
+    }
+    return '<a class="profil-chip ohne" href="profil-neu.php">' . h(t('Profil erstellen')) . '</a>';
+}
+
+/** Zusätzliche Anzeige im Profil-Knopf (z. B. Serie). */
+function kopf_extra(array $profil): string
 {
     return '';
 }

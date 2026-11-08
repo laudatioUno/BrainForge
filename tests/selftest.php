@@ -88,14 +88,14 @@ sprache('de');
 
 // Every text passed to t() has a translation in every language file
 $texte = [];
-foreach (array_merge(glob(__DIR__ . '/../*.php'), glob(__DIR__ . '/../lang/*.php')) as $datei) {
+foreach (array_merge(glob(__DIR__ . '/../*.php'), glob(__DIR__ . '/../inc/*.php'), glob(__DIR__ . '/../lang/*.php')) as $datei) {
     preg_match_all("/\\bt\\('((?:[^'\\\\]|\\\\.)*)'/", file_get_contents($datei), $m);
     foreach ($m[1] as $text) {
         $texte[stripslashes($text)] = true;
     }
 }
-foreach (array_merge(array_values(STUFEN), array_values(THEMEN)) as $text) {
-    $texte[$text] = true; // werden als t(STUFEN[...]) bzw. t(THEMEN[...]) übersetzt
+foreach (array_merge(array_values(STUFEN), array_values(THEMEN), array_column(db_schritte(), 0)) as $text) {
+    $texte[$text] = true; // werden als t(STUFEN[...]), t(THEMEN[...]) bzw. t($schritt) übersetzt
 }
 foreach (array_keys(SPRACHEN) as $sp) {
     if ($sp === 'de') {
@@ -129,6 +129,39 @@ foreach (['leicht', 'mittel'] as $stufe) {
             $vorher = $set;
         }
     }
+}
+
+// Profile icons: valid seeds, same seed = same picture, different seeds differ
+pruefen(avatar_gueltig(avatar_neu()) && !avatar_gueltig('xyz') && !avatar_gueltig('"><svg'), 'Avatar-Seed-Prüfung');
+pruefen(avatar_svg('0a1b2c3d') === avatar_svg('0a1b2c3d'), 'Avatar nicht reproduzierbar');
+$bilder = [];
+for ($i = 0; $i < 40; $i++) {
+    $bilder[avatar_svg(sprintf('%08x', $i * 2654435761 % 4294967296))] = true;
+}
+pruefen(count($bilder) >= 30, 'Avatare zu wenig verschieden: ' . count($bilder));
+pruefen(str_contains(avatar_svg('ungueltig'), '<svg') && !str_contains(avatar_svg('"><x'), '"><x'), 'Ungültiger Avatar-Seed wird nicht abgefangen');
+
+// Personal links: long random keys, only hashes stored
+$k1 = zufallsschluessel();
+pruefen(strlen($k1) === 32 && preg_match('/^[A-Za-z0-9_-]+$/', $k1) && $k1 !== zufallsschluessel(), 'Schlüssel ungültig');
+pruefen(schluessel_hash($k1) === hash('sha256', $k1) && schluessel_hash($k1) !== $k1, 'Schlüssel-Hash');
+pruefen(spitzname("  Max\t\n Muster  ") === 'Max Muster' && mb_strlen(spitzname(str_repeat('ä', 50))) === 30, 'Spitzname bereinigen');
+
+// Database migration from version 1 (old installations) keeps results and adds the profile tables
+$alt = new PDO('sqlite::memory:');
+$alt->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$alt->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+$alt->exec('CREATE TABLE resultate (id INTEGER PRIMARY KEY AUTOINCREMENT, zeit TEXT NOT NULL, name TEXT NOT NULL, modus TEXT NOT NULL,
+    anzahl INTEGER NOT NULL, land_richtig INTEGER NOT NULL, haupt_richtig INTEGER NOT NULL, punkte INTEGER NOT NULL,
+    max_punkte INTEGER NOT NULL, prozent REAL NOT NULL, dauer_sek INTEGER NOT NULL, details TEXT NOT NULL)');
+$alt->exec("INSERT INTO resultate VALUES (NULL, '2025-01-01 10:00:00', 'Alt', 'kurz', 15, 10, 9, 19, 30, 63.3, 200, '[]')");
+$alt->exec('PRAGMA user_version = 1');
+db_migrieren($alt);
+pruefen((int)$alt->query('PRAGMA user_version')->fetchColumn() === DB_VERSION, 'Migration: Version nicht aktuell');
+$z = $alt->query('SELECT * FROM resultate')->fetch();
+pruefen($z['name'] === 'Alt' && $z['spielart'] === 'flaggen' && $z['profil_id'] === null, 'Migration: altes Resultat verändert');
+foreach (['profile', 'geraete', 'drossel'] as $tabelle) {
+    pruefen((bool)$alt->query("SELECT 1 FROM sqlite_master WHERE name = '$tabelle'")->fetchColumn(), "Migration: Tabelle $tabelle fehlt");
 }
 
 pruefen((bool)preg_match('/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/', APP_VERSION), 'APP_VERSION hat nicht die Form 1.2.3');

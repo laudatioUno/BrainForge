@@ -19,7 +19,9 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 - German and French, including country and capital names and the answer checking; the choice is remembered, the browser language decides on the first visit
 - Dark mode: follows the device setting, or choose light/dark yourself
 - App icon and favicon; can be added to the home screen of a phone like an app
-- No login, no external services, no JavaScript framework
+- Profiles without passwords: nickname, e-mail and a random monster icon; a personal link logs a device in for good. *Link vergessen?* sends a new link and logs out all devices. Playing as a guest still works
+- Admin area: profiles with last login and number of rounds, send a new link, rename, delete; mail settings (SMTP or PHP `mail()`) with a test mail
+- No external services, no JavaScript framework
 
 ## Requirements
 
@@ -34,7 +36,16 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 3. Make sure `data/` is writable for PHP. The database is created with the first result.
 4. Open the site in the browser.
 
-Settings (number of countries in *Kurz*, tolerant checking on/off, default language, database path) are in `config.php`.
+Settings (number of countries in *Kurz*, tolerant checking on/off, default language, database path, admin password) are in `config.php`.
+
+### Profiles and e-mail
+
+1. Set your own `ADMIN_PASSWORT` in `config.php`. As long as it is `bitte-aendern`, the admin area stays locked.
+2. Open `admin` (redirects to `admin.php`; needs `mod_rewrite`, otherwise use `admin.php` directly), log in and fill in the **Mail-Einstellungen** (your host's SMTP server, port, encryption, user, password, sender address). *Speichern und Testmail senden* checks them right away.
+   They are stored in `data/einstellungen.php` (protected like the database).
+3. If the site runs behind a proxy or under several addresses, enter the *Adresse der Seite*; the links in the mails use it.
+
+Without mail settings, profiles still work: the personal link is shown on the screen after creating the profile.
 A detailed guide in German is in [LIESMICH.txt](LIESMICH.txt).
 
 ## Update
@@ -42,7 +53,7 @@ A detailed guide in German is in [LIESMICH.txt](LIESMICH.txt).
 1. Upload the files of the new release and overwrite the old ones. **Keep the folder `data/`** – it holds the results.
 2. Open the site. If the database needs an update, the page «Update nötig» appears: click **GO**. A backup copy (`data/resultate-sicherung-<date>.sqlite`) is made first; all results are kept.
 
-If you changed `config.php`, apply your changes again after uploading.
+If you changed `config.php` (e.g. the admin password), apply your changes again after uploading. The mail settings are in `data/` and stay.
 
 ## Release
 
