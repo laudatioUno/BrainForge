@@ -17,7 +17,7 @@ function link_zu(array $aenderung): string
 {
     global $spielart, $stufe, $modus, $filter;
     $p = array_merge(['spielart' => $spielart, 'stufe' => $stufe, 'modus' => $modus, 'name' => $filter], $aenderung);
-    if ($p['spielart'] !== 'umrisse') {
+    if ($p['spielart'] === 'flaggen') {
         unset($p['stufe']);
     }
     return '?' . http_build_query(array_filter($p, fn($v) => $v !== '' && $v !== null));
@@ -32,21 +32,23 @@ if (isset($_GET['csv'])) {
     fwrite($out, "\xEF\xBB\xBF"); // BOM, damit Excel die Umlaute korrekt zeigt
     fputcsv($out, [t('Rang'), t('Zeit'), t('Name'), t('Spielart'), t('Stufe'), t('Umfang'), t('Fragen'), t('Länder richtig'), t('Hauptstädte richtig'), t('Punkte'), t('Max. Punkte'), t('Prozent'), t('Dauer (s)')], ';');
     foreach ($liste as $z) {
-        fputcsv($out, [$z['rang'], $z['zeit'], $z['name'], $z['spielart'] === 'umrisse' ? t('Umrisse') : t('Flaggen'),
-            isset(STUFEN[$z['stufe']]) ? t(STUFEN[$z['stufe']]) : '', modus_name($z['modus']), $z['anzahl'], $z['land_richtig'],
-            $z['spielart'] === 'umrisse' ? '' : $z['haupt_richtig'],
+        fputcsv($out, [$z['rang'], $z['zeit'], $z['name'], ['umrisse' => t('Umrisse'), 'einmaleins' => t('1×1')][$z['spielart']] ?? t('Flaggen'),
+            isset(STUFEN[$z['stufe']]) ? t(STUFEN[$z['stufe']]) : ($z['spielart'] === 'einmaleins' ? t('bis {n}', ['n' => (int)$z['stufe']]) : ''),
+            modus_name($z['modus']), $z['anzahl'], $z['land_richtig'],
+            $z['spielart'] === 'flaggen' ? $z['haupt_richtig'] : '',
             $z['punkte'], $z['max_punkte'], str_replace('.', ',', (string)$z['prozent']), $z['dauer_sek']], ';');
     }
     exit;
 }
 
 // Anzahl Resultate je Spielart, Stufe und Umfang (für die Zahlen in den Reitern)
-$zahl = ['flaggen' => 0, 'umrisse' => 0];
+$zahl = ['flaggen' => 0, 'umrisse' => 0, 'einmaleins' => 0];
 $zahlStufe = [];
-$zahlModus = ['kurz' => 0, 'komplett' => 0];
+$modi = $spielart === 'einmaleins' ? ['kurz', 'blitz'] : ['kurz', 'komplett'];
+$zahlModus = array_fill_keys($modi, 0);
 foreach (db()->query('SELECT spielart, stufe, modus, COUNT(*) AS n FROM resultate GROUP BY spielart, stufe, modus') as $g) {
     $zahl[$g['spielart']] = ($zahl[$g['spielart']] ?? 0) + (int)$g['n'];
-    if ($g['spielart'] === 'umrisse') {
+    if ($g['spielart'] === $spielart) {
         $zahlStufe[$g['stufe']] = ($zahlStufe[$g['stufe']] ?? 0) + (int)$g['n'];
     }
     if ($g['spielart'] === $spielart && $g['stufe'] === $stufe) {
@@ -63,7 +65,8 @@ kopf(t('Ergebnisse'));
 
 <nav class="tabs" aria-label="<?= h(t('Spielart')) ?>">
   <a href="<?= h(link_zu(['spielart' => 'flaggen'])) ?>" class="<?= $spielart === 'flaggen' ? 'aktiv' : '' ?>"><?= h(t('Flaggen')) ?> <span><?= $zahl['flaggen'] ?></span></a>
-  <a href="<?= h(link_zu(['spielart' => 'umrisse', 'stufe' => $stufe ?: 'mittel'])) ?>" class="<?= $spielart === 'umrisse' ? 'aktiv' : '' ?>"><?= h(t('Umrisse')) ?> <span><?= $zahl['umrisse'] ?></span></a>
+  <a href="<?= h(link_zu(['spielart' => 'umrisse', 'stufe' => 'mittel', 'modus' => 'kurz'])) ?>" class="<?= $spielart === 'umrisse' ? 'aktiv' : '' ?>"><?= h(t('Umrisse')) ?> <span><?= $zahl['umrisse'] ?></span></a>
+  <a href="<?= h(link_zu(['spielart' => 'einmaleins', 'stufe' => (string)EINMALEINS_BIS[0], 'modus' => 'kurz'])) ?>" class="<?= $spielart === 'einmaleins' ? 'aktiv' : '' ?>"><?= h(t('1×1')) ?> <span><?= $zahl['einmaleins'] ?></span></a>
 </nav>
 
 <div class="karte auswahl-leiste">
@@ -76,11 +79,20 @@ kopf(t('Ergebnisse'));
       <?php endforeach; ?>
     </div>
   </div>
+  <?php elseif ($spielart === 'einmaleins'): ?>
+  <div class="segment-gruppe">
+    <span class="segment-titel"><?= h(t('Bereich')) ?></span>
+    <div class="segment" role="group" aria-label="<?= h(t('Bereich')) ?>">
+      <?php foreach (EINMALEINS_BIS as $n): $s = (string)$n; ?>
+        <a href="<?= h(link_zu(['stufe' => $s])) ?>" class="<?= $stufe === $s ? 'aktiv' : '' ?>"<?= $stufe === $s ? ' aria-current="true"' : '' ?>><?= h(t('bis {n}', ['n' => $n])) ?> <span><?= $zahlStufe[$s] ?? 0 ?></span></a>
+      <?php endforeach; ?>
+    </div>
+  </div>
   <?php endif; ?>
   <div class="segment-gruppe">
     <span class="segment-titel"><?= h(t('Umfang')) ?></span>
     <div class="segment" role="group" aria-label="<?= h(t('Umfang')) ?>">
-      <?php foreach (['kurz', 'komplett'] as $m): ?>
+      <?php foreach ($modi as $m): ?>
         <a href="<?= h(link_zu(['modus' => $m])) ?>" class="<?= $modus === $m ? 'aktiv' : '' ?>"<?= $modus === $m ? ' aria-current="true"' : '' ?>><?= modus_name($m) ?> <span><?= $zahlModus[$m] ?></span></a>
       <?php endforeach; ?>
     </div>
@@ -100,5 +112,6 @@ kopf(t('Ergebnisse'));
 <div class="karte tabelle-wrap">
   <?php rangliste_tabelle($liste, $spielart); ?>
 </div>
-<p class="klein"><?= h(t('Jede Kombination aus Spielart, Stufe und Umfang hat eine eigene Rangliste. Sortiert nach Prozent, bei Gleichstand zählt die schnellere Zeit.')) ?></p>
+<p class="klein"><?= h(t('Jede Kombination aus Spielart, Stufe und Umfang hat eine eigene Rangliste. Sortiert nach Prozent, bei Gleichstand zählt die schnellere Zeit.')) ?>
+  <?php if ($spielart === 'einmaleins'): ?><?= h(t('1×1 Blitz: sortiert nach Anzahl richtig, bei Gleichstand zählt die bessere Quote.')) ?><?php endif; ?></p>
 <?php fuss();

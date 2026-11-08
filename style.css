@@ -246,7 +246,7 @@ tr.markiert td:first-child { box-shadow: inset 4px 0 0 var(--gold); }
 .punkte-leicht i.an { background: var(--ok); }
 .punkte-mittel i.an { background: var(--tipp); }
 .punkte-schwer i.an { background: var(--falsch); }
-#stufen[hidden] { display: none; }
+#stufen[hidden], #umfang[hidden], #einmaleins-wahl[hidden] { display: none; }
 
 .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .chips a {
@@ -496,3 +496,63 @@ select { width: 100%; padding: 10px 12px; font: inherit; border: 1px solid var(-
   .profil-chip { padding-right: 3px; }
 }
 .feld-raster label.wahl-zeile { display: flex; align-self: end; padding-bottom: 12px; }
+
+/* ---- 1×1 ---- */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rechnen-icon {
+  width: 48px; height: 48px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  background: var(--akzent); color: var(--auf-akzent); font-weight: 800; font-size: .95rem; letter-spacing: -.02em;
+}
+.bereich { display: grid; gap: 4px; margin-bottom: 12px; }
+.bereich input[type=range] { width: 100%; margin: 4px 0 0; padding: 0; accent-color: var(--akzent); }
+.bereich-marken { display: flex; justify-content: space-between; font-size: .8rem; color: var(--leise); }
+.rechnen { text-align: center; }
+.rueck { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; font-size: 1.1rem; }
+.rueck.ok { background: var(--ok-bg); color: var(--ok); }
+.rueck.falsch { background: var(--falsch-bg); color: var(--falsch); }
+.rueck .leise { font-size: .9rem; }
+.rechnung-form { display: grid; gap: 14px; justify-items: center; }
+.rechnung { display: flex; align-items: center; gap: 12px; margin: 0; font-size: clamp(2.2rem, 9vw, 3.4rem); font-weight: 800; color: var(--text); }
+.rechnung input { width: 3.3em; font-size: inherit; font-weight: 800; text-align: center; padding: 2px 6px; font-variant-numeric: tabular-nums; }
+.nochmals-chip { display: inline-block; padding: 2px 10px; border-radius: 99px; background: var(--tipp-bg); color: var(--tipp); font-weight: 700; font-size: .85rem; }
+.nochmals-chip.klein { font-size: .72rem; padding: 1px 7px; margin-left: 4px; }
+tr.wiederholung td { opacity: .8; }
+.serie-chip { font-weight: 700; font-size: .85rem; margin-left: 2px; white-space: nowrap; }
+
+/* 1×1-Statistik */
+.stat-karte { padding: 18px; margin-bottom: 20px; }
+.stat-karte > p:first-child { margin-top: 0; }
+.stat-kopf { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.stat-kopf .profil-zahlen { flex: 1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat-kopf > p { flex-basis: 100%; margin: 0; }
+.tafel-scroll { overflow-x: auto; max-width: 100%; min-width: 0; }
+/* passt die ganze Tafel in die Breite (auch 15 × 15 auf dem Handy) */
+.tafel { width: 100%; max-width: calc((var(--n) + 1) * 3.2em); table-layout: fixed; border-collapse: separate; border-spacing: 2px;
+  margin: 0 auto; font-size: clamp(.55rem, 2.4vw, .8rem); font-variant-numeric: tabular-nums; }
+.tafel th { color: var(--leise); font-weight: 700; padding: 2px 0; }
+.tafel td { height: 2.2em; text-align: center; border-radius: 4px; padding: 0; overflow: hidden; }
+.st-sitzt { background: var(--ok); color: var(--auf-akzent); }
+.st-unsicher { background: var(--tipp-bg); color: var(--tipp); }
+.st-ueben { background: var(--falsch-bg); color: var(--falsch); font-weight: 700; box-shadow: inset 0 0 0 1px var(--falsch); }
+.st-neu { background: var(--gedaempft); color: var(--leise); box-shadow: inset 0 0 0 1px var(--gedaempft-linie); }
+.legende { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 14px 0 0; font-size: .9rem; }
+.legende .punkt { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+.abzeichen { list-style: none; padding: 0; margin: 0 0 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.abzeichen li { background: var(--karte); border: 1px solid var(--linie); border-radius: var(--radius); padding: 14px 12px; text-align: center; display: grid; gap: 4px; justify-items: center; align-content: start; }
+.abzeichen .symbol { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--akzent-hell); color: var(--akzent-text); font-size: 1.8rem; font-weight: 800; line-height: 1; }
+.abzeichen li.erreicht { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.abzeichen li.erreicht .symbol { background: var(--markiert); color: var(--gold-text); }
+.abzeichen li.offen { opacity: .55; filter: grayscale(1); }
+.abzeichen small { color: var(--leise); font-size: .8rem; }
+.verlauf { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.verlauf a { display: grid; grid-template-columns: 3.6em 9.5em minmax(0, 1fr) 7.5em; gap: 10px; align-items: center; color: inherit; text-decoration: none; padding: 6px 8px; border-radius: 8px; }
+.verlauf a:hover { background: var(--bg); }
+.v-balken { height: 12px; background: var(--linie); border-radius: 99px; overflow: hidden; }
+.v-balken span { display: block; height: 100%; background: var(--ok); border-radius: 99px; }
+.v-datum, .v-art, .v-wert { font-size: .85rem; color: var(--leise); }
+.v-wert { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .stat-kopf .profil-zahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .verlauf a { grid-template-columns: 3.2em minmax(0, 1fr) auto; }
+  .v-art { display: none; }
+}

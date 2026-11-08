@@ -5,6 +5,9 @@ require __DIR__ . '/lib.php';
 $fehler = '';
 // Zuletzt gewählte Kombination vorauswählen
 [$spielart, $stufe, $modus] = $_SESSION['letzte_kombi'] ?? ['flaggen', '', 'kurz'];
+if (isset($_GET['spielart'])) {
+    [$spielart, $stufe, $modus] = kombi_aus($_GET, [$spielart, $stufe, $modus]);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $profil = profil();
@@ -14,10 +17,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim((string)($_POST['name'] ?? ''));
         $name = mb_substr(preg_replace('/\s+/u', ' ', $name) ?? '', 0, 40);
     }
-    [$spielart, $stufe, $modus] = kombi_aus($_POST);
+    $eingabe = $_POST;
+    if (($eingabe['spielart'] ?? '') === 'einmaleins') {
+        // eigene Feldnamen, weil die Formulargruppen der Länder gleichzeitig im Formular stehen
+        $eingabe['stufe'] = EINMALEINS_BIS[(int)($eingabe['bereich'] ?? 0)] ?? EINMALEINS_BIS[0];
+        $eingabe['modus'] = $eingabe['tempo'] ?? 'kurz';
+    }
+    [$spielart, $stufe, $modus] = kombi_aus($eingabe);
 
     if ($name === '') {
         $fehler = t('Bitte gib deinen Namen ein.');
+    } elseif ($spielart === 'einmaleins') {
+        $bis = (int)$stufe;
+        $mitProfil = $profil !== null;
+        $stand = $mitProfil ? lernstand((int)$profil['id']) : [];
+        $_SESSION['rechnen'] = [
+            'token'     => bin2hex(random_bytes(16)),
+            'name'      => $name,
+            'profil_id' => $mitProfil ? (int)$profil['id'] : null,
+            'bis'       => $bis,
+            'modus'     => $modus,
+            'aufgaben'  => rechnungen_ziehen($bis, $modus === 'blitz' ? 40 : EINMALEINS_KURZ, $stand, $mitProfil),
+            'antworten' => [],
+            'wiederholt' => [],
+            'letzte'    => null,
+            'pos'       => 0,
+            'start'     => time(),
+            'ende'      => microtime(true) + BLITZ_SEKUNDEN,
+            'seit'      => microtime(true),
+            'seit_pos'  => -1,
+        ];
+        if ($profil === null) {
+            $_SESSION['letzter_name'] = $name;
+        }
+        $_SESSION['letzte_kombi'] = [$spielart, $stufe, $modus];
+        header('Location: einmaleins.php');
+        exit;
     } else {
         $codes = array_keys(LAENDER);
         shuffle($codes);
@@ -53,21 +88,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Bestenliste: welche Kombination wird gezeigt?
-$bl = $_GET['bl'] ?? ($spielart === 'umrisse' ? $stufe : 'flaggen');
-if ($bl !== 'flaggen' && !isset(STUFEN[$bl])) {
+// Bestenliste: welche Kombination wird gezeigt? (flaggen, leicht/mittel/schwer, e10/e12/e15)
+$bl = $_GET['bl'] ?? match ($spielart) { 'umrisse' => $stufe, 'einmaleins' => 'e' . $stufe, default => 'flaggen' };
+$einmaleinsListen = array_map(fn($n) => 'e' . $n, EINMALEINS_BIS);
+if ($bl !== 'flaggen' && !isset(STUFEN[$bl]) && !in_array($bl, $einmaleinsListen, true)) {
     $bl = 'flaggen';
 }
-$blSpielart = $bl === 'flaggen' ? 'flaggen' : 'umrisse';
-$blStufe = $bl === 'flaggen' ? '' : $bl;
+$blSpielart = $bl === 'flaggen' ? 'flaggen' : (isset(STUFEN[$bl]) ? 'umrisse' : 'einmaleins');
+$blStufe = $bl === 'flaggen' ? '' : ($blSpielart === 'umrisse' ? $bl : substr($bl, 1));
+$blModi = $blSpielart === 'einmaleins' ? ['kurz', 'blitz'] : ['kurz', 'komplett'];
+$bereich = $spielart === 'einmaleins' ? (int)array_search((int)$stufe, EINMALEINS_BIS, true) : 0;
+$tempo = $spielart === 'einmaleins' ? $modus : 'kurz';
+if ($spielart === 'einmaleins') {
+    $modus = 'kurz'; // Umfang der Länder-Quiz
+}
 
 $alle = count(LAENDER);
-$stufeGewaehlt = $stufe ?: 'mittel';
+$stufeGewaehlt = isset(STUFEN[$stufe]) ? $stufe : 'mittel';
 kopf(APP_NAME);
 ?>
 <header class="hero">
-  <h1><?= h(t('Länder Europas')) ?></h1>
-  <p><?= h(t('Flaggen und Umrisse erkennen – Länder und Hauptstädte üben.')) ?></p>
+  <h1><?= h(t('Üben mit BrainForge')) ?></h1>
+  <p><?= h(t('Flaggen und Umrisse erkennen, Länder und Hauptstädte lernen – und das 1×1 trainieren.')) ?></p>
 </header>
 
 <form method="post" class="karte start" id="startform">
@@ -83,7 +125,7 @@ kopf(APP_NAME);
 
   <fieldset>
     <legend><?= h(t('Was willst du üben?')) ?></legend>
-    <div class="wahl-zwei">
+    <div class="wahl-drei spielarten">
       <label class="wahl spielart">
         <input type="radio" name="spielart" value="flaggen" <?= $spielart === 'flaggen' ? 'checked' : '' ?>>
         <img src="<?= h(flagge('ch')) ?>" alt="">
@@ -92,7 +134,34 @@ kopf(APP_NAME);
       <label class="wahl spielart">
         <input type="radio" name="spielart" value="umrisse" <?= $spielart === 'umrisse' ? 'checked' : '' ?>>
         <img src="<?= h(umriss('it')) ?>" alt="">
-        <span><strong><?= h(t('Umrisse')) ?> <em class="neu"><?= h(t('NEU')) ?></em></strong><small><?= h(t('Land an seiner Form erkennen')) ?></small></span>
+        <span><strong><?= h(t('Umrisse')) ?></strong><small><?= h(t('Land an seiner Form erkennen')) ?></small></span>
+      </label>
+      <label class="wahl spielart">
+        <input type="radio" name="spielart" value="einmaleins" <?= $spielart === 'einmaleins' ? 'checked' : '' ?>>
+        <span class="rechnen-icon" aria-hidden="true">7×8</span>
+        <span><strong><?= h(t('1×1')) ?> <em class="neu"><?= h(t('NEU')) ?></em></strong><small><?= h(t('Malrechnen im Kopf, schnell und sicher')) ?></small></span>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset id="einmaleins-wahl">
+    <legend><?= h(t('1×1')) ?></legend>
+    <div class="bereich">
+      <label for="bereich"><?= h(t('Bereich')) ?>: <strong id="bereich-wert"><?= h(t('bis {n}', ['n' => EINMALEINS_BIS[$bereich]])) ?></strong></label>
+      <input type="range" id="bereich" name="bereich" min="0" max="<?= count(EINMALEINS_BIS) - 1 ?>" step="1" value="<?= $bereich ?>"
+             list="bereich-marken" data-werte="<?= h(json_encode(array_map(fn($n) => t('bis {n}', ['n' => $n]), EINMALEINS_BIS), JSON_UNESCAPED_UNICODE)) ?>">
+      <datalist id="bereich-marken"><?php foreach (EINMALEINS_BIS as $i => $n): ?><option value="<?= $i ?>" label="<?= $n ?>"></option><?php endforeach; ?></datalist>
+      <div class="bereich-marken" aria-hidden="true"><?php foreach (EINMALEINS_BIS as $n): ?><span><?= $n ?>×</span><?php endforeach; ?></div>
+      <small class="leise"><?= h(t('Bis 10 ist das kleine 1×1, bis 12 oder 15 wird es knifflig.')) ?></small>
+    </div>
+    <div class="wahl-zwei">
+      <label class="wahl">
+        <input type="radio" name="tempo" value="kurz" <?= $tempo === 'kurz' ? 'checked' : '' ?>>
+        <span><strong><?= h(t('Kurz')) ?></strong> · <?= h(t('{n} Aufgaben, die Zeit zählt', ['n' => EINMALEINS_KURZ])) ?></span>
+      </label>
+      <label class="wahl">
+        <input type="radio" name="tempo" value="blitz" <?= $tempo === 'blitz' ? 'checked' : '' ?>>
+        <span><strong><?= h(t('Blitz')) ?></strong> · <?= h(t('so viele wie möglich in {n} Sekunden', ['n' => BLITZ_SEKUNDEN])) ?></span>
       </label>
     </div>
   </fieldset>
@@ -120,7 +189,7 @@ kopf(APP_NAME);
     </div>
   </fieldset>
 
-  <fieldset>
+  <fieldset id="umfang">
     <legend><?= h(t('Umfang')) ?></legend>
     <div class="wahl-zwei">
       <label class="wahl">
@@ -138,11 +207,20 @@ kopf(APP_NAME);
 </form>
 <p class="klein"><?= h(t('Tipp: Umlaute und Gross-/Kleinschreibung sind egal (ue statt ü geht auch).')) ?></p>
 <script>
-// Stufe nur zeigen, wenn "Umrisse" gewählt ist (ohne JavaScript bleibt sie sichtbar)
+// Nur die Wahl zur gewählten Spielart zeigen (ohne JavaScript bleibt alles sichtbar)
 (function () {
-  var form = document.getElementById('startform'), stufen = document.getElementById('stufen');
-  function zeigen() { stufen.hidden = !form.querySelector('input[name=spielart][value=umrisse]').checked; }
+  var form = document.getElementById('startform');
+  var bereich = document.getElementById('bereich'), wert = document.getElementById('bereich-wert');
+  var texte = JSON.parse(bereich.getAttribute('data-werte'));
+  function zeigen() {
+    var art = (form.querySelector('input[name=spielart]:checked') || {}).value;
+    document.getElementById('stufen').hidden = art !== 'umrisse';
+    document.getElementById('umfang').hidden = art === 'einmaleins';
+    document.getElementById('einmaleins-wahl').hidden = art !== 'einmaleins';
+    wert.textContent = texte[bereich.value];
+  }
   form.addEventListener('change', zeigen);
+  bereich.addEventListener('input', zeigen);
   zeigen();
 })();
 </script>
@@ -153,12 +231,17 @@ kopf(APP_NAME);
     <a class="sekundaer" href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?>"><?= h(t('Alle Ergebnisse')) ?> →</a>
   </div>
   <nav class="chips" aria-label="<?= h(t('Bestenliste wählen')) ?>">
-    <?php foreach (['flaggen' => t('Flaggen'), 'leicht' => t('Umrisse') . ' · ' . t('Leicht'), 'mittel' => t('Umrisse') . ' · ' . t('Mittel'), 'schwer' => t('Umrisse') . ' · ' . t('Schwer')] as $k => $titel): ?>
+    <?php
+    $chips = ['flaggen' => t('Flaggen'), 'leicht' => t('Umrisse') . ' · ' . t('Leicht'), 'mittel' => t('Umrisse') . ' · ' . t('Mittel'), 'schwer' => t('Umrisse') . ' · ' . t('Schwer')];
+    foreach (EINMALEINS_BIS as $n) {
+        $chips['e' . $n] = t('1×1') . ' · ' . t('bis {n}', ['n' => $n]);
+    }
+    foreach ($chips as $k => $titel): ?>
       <a href="?bl=<?= $k ?>#bestenliste" class="<?= $bl === $k ? 'aktiv' : '' ?>"<?= $bl === $k ? ' aria-current="true"' : '' ?>><?= h($titel) ?></a>
     <?php endforeach; ?>
   </nav>
   <div class="bl-spalten">
-  <?php foreach (['kurz', 'komplett'] as $m): $top = array_slice(rangliste($blSpielart, $blStufe, $m), 0, 5); ?>
+  <?php foreach ($blModi as $m): $top = array_slice(rangliste($blSpielart, $blStufe, $m), 0, 5); ?>
     <div class="karte bl">
       <h3><?= modus_name($m) ?></h3>
       <?php if (!$top): ?>
@@ -169,7 +252,9 @@ kopf(APP_NAME);
           <li>
             <span class="rang"><?= ['', '🥇', '🥈', '🥉'][(int)$z['rang']] ?? (int)$z['rang'] . '.' ?></span>
             <span class="bl-name"><?= spieler_name($z) ?></span>
-            <span class="bl-wert"><?= number_format((float)$z['prozent'], 1, '.', '') ?> % · <?= h(dauer((int)$z['dauer_sek'])) ?></span>
+            <span class="bl-wert"><?= ist_blitz($blSpielart, $m)
+                ? h(t('{n} richtig', ['n' => (int)$z['punkte']])) . ' · ' . number_format((float)$z['prozent'], 0, '.', '') . ' %'
+                : number_format((float)$z['prozent'], 1, '.', '') . ' % · ' . h(dauer((int)$z['dauer_sek'])) ?></span>
           </li>
         <?php endforeach; ?>
         </ol>

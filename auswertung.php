@@ -51,6 +51,8 @@ if (!$r) {
 }
 // Einordnung in die Rangliste der gleichen Kombination (Spielart, Stufe, Umfang)
 $umrisse = $r['spielart'] === 'umrisse';
+$rechnen = $r['spielart'] === 'einmaleins';
+$blitz = ist_blitz($r['spielart'], $r['modus']);
 $kombi = kombi_name($r['spielart'], $r['stufe'], $r['modus']);
 $liste = rangliste($r['spielart'], $r['stufe'], $r['modus']);
 $platz = 0;
@@ -67,6 +69,10 @@ $eigenes = in_array($id, $_SESSION['meine'] ?? [], true)
 $uebernehmen = $ich === null && $r['profil_id'] === null && in_array($id, $_SESSION['meine'] ?? [], true);
 $details = json_decode($r['details'], true);
 $p = (float)$r['prozent'];
+if ($rechnen) {
+    $ms = array_column($details, 'ms');
+    $tempo = $ms ? array_sum($ms) / count($ms) / 1000 : 0;
+}
 $lob = $p >= 95 ? t('Hervorragend!') : ($p >= 80 ? t('Sehr gut!') : ($p >= 60 ? t('Gut gemacht, weiter üben!') : t('Da geht noch mehr, übe die roten Felder nochmals.')));
 
 function zelle(string $eingabe, string $status, string $loesung): string
@@ -88,11 +94,18 @@ kopf(t('Auswertung'));
 </header>
 
 <section class="karte bilanz">
-  <div class="gross"><?= (int)$r['punkte'] ?> / <?= (int)$r['max_punkte'] ?> <small><?= h(t('Punkte')) ?></small></div>
+  <?php if ($blitz): ?>
+  <div class="gross"><?= (int)$r['punkte'] ?> <small><?= h(t('richtig in {n} Sekunden', ['n' => BLITZ_SEKUNDEN])) ?></small></div>
+  <?php else: ?>
+  <div class="gross"><?= (int)$r['punkte'] ?> / <?= (int)$r['max_punkte'] ?> <small><?= h($rechnen ? t('richtig') : t('Punkte')) ?></small></div>
+  <?php endif; ?>
   <div class="balken"><span style="width: <?= $p ?>%"></span></div>
   <p class="lob"><?= h($lob) ?></p>
   <dl>
-    <?php if ($umrisse): ?>
+    <?php if ($rechnen): ?>
+    <div><dt><?= h(t('Aufgaben')) ?></dt><dd><?= (int)$r['punkte'] ?> / <?= (int)$r['anzahl'] ?> <?= h(t('richtig')) ?></dd></div>
+    <div><dt><?= h(t('Tempo')) ?></dt><dd><?= h(t('{s} s pro Aufgabe', ['s' => number_format($tempo, 1, '.', '')])) ?></dd></div>
+    <?php elseif ($umrisse): ?>
     <div><dt><?= h(t('Länder erkannt')) ?></dt><dd><?= (int)$r['land_richtig'] ?> / <?= (int)$r['anzahl'] ?></dd></div>
     <?php else: ?>
     <div><dt><?= h(t('Länder')) ?></dt><dd><?= (int)$r['land_richtig'] ?> / <?= (int)$r['anzahl'] ?></dd></div>
@@ -118,7 +131,9 @@ kopf(t('Auswertung'));
     <span class="platz-nr"><?= $platz ?>.</span>
     <span>
       <strong><?= h($eigenes ? t('Dein Platz von {n}', ['n' => count($liste)]) : t('Platz von {n}', ['n' => count($liste)])) ?></strong>
-      <small><?= h(t('Rangliste «{kombi}» · sortiert nach Prozent, bei Gleichstand zählt die schnellere Zeit', ['kombi' => $kombi])) ?></small>
+      <small><?= h($blitz
+          ? t('Rangliste «{kombi}» · sortiert nach Anzahl richtig, bei Gleichstand zählt die bessere Quote', ['kombi' => $kombi])
+          : t('Rangliste «{kombi}» · sortiert nach Prozent, bei Gleichstand zählt die schnellere Zeit', ['kombi' => $kombi])) ?></small>
     </span>
   </div>
   <div class="rang-scroll" id="rang-scroll">
@@ -136,7 +151,22 @@ kopf(t('Auswertung'));
 <h2 class="zwischentitel"><?= h($eigenes ? t('Deine Antworten') : t('Antworten')) ?></h2>
 <div class="karte tabelle-wrap">
 <table class="auswertung">
-  <?php if ($umrisse): ?>
+  <?php if ($rechnen): ?>
+  <thead><tr><th>#</th><th><?= h(t('Rechnung')) ?></th><th><?= h($eigenes ? t('Deine Antwort') : t('Antwort')) ?></th><th class="r"><?= h(t('Zeit')) ?></th></tr></thead>
+  <tbody>
+  <?php foreach ($details as $i => $d): $soll = (int)$d['a'] * (int)$d['b']; ?>
+    <tr<?= !empty($d['w']) && !$blitz ? ' class="wiederholung"' : '' ?>>
+      <td class="nr"><?= $i + 1 ?></td>
+      <td class="gesucht"><?= (int)$d['a'] ?> × <?= (int)$d['b'] ?><?php if (!empty($d['w'])): ?> <span class="nochmals-chip klein"><?= h(t('Nochmals')) ?></span><?php endif; ?></td>
+      <td class="<?= $d['ok'] ? 'ok' : 'falsch' ?>">
+        <span class="ein"><?= (int)$d['e'] ?></span>
+        <?php if (!$d['ok']): ?><span class="soll"><?= $soll ?></span><?php endif; ?>
+      </td>
+      <td class="r leise"><?= h(number_format((int)$d['ms'] / 1000, 1, '.', '')) ?> s</td>
+    </tr>
+  <?php endforeach; ?>
+  </tbody>
+  <?php elseif ($umrisse): ?>
   <thead><tr><th>#</th><th><?= h(t('Umriss')) ?></th><th><?= h(t('Gesucht')) ?></th><th><?= h($eigenes ? t('Deine Antwort') : t('Antwort')) ?></th></tr></thead>
   <tbody>
   <?php foreach ($details as $i => $d): ?>
@@ -173,8 +203,15 @@ kopf(t('Auswertung'));
 </table>
 </div>
 
+<?php if ($rechnen && !$blitz): ?>
+  <p class="klein"><?= h(t('Wiederholungen («Nochmals») zählen nicht fürs Ergebnis, aber sie helfen beim Merken.')) ?></p>
+<?php endif; ?>
+
 <div class="abschluss">
+  <?php if ($rechnen && $ich !== null && (int)$r['profil_id'] === (int)$ich['id']): ?>
+    <a class="sekundaer" href="statistik.php"><?= h(t('Meine 1×1-Statistik')) ?></a>
+  <?php endif; ?>
   <a class="sekundaer" href="ergebnisse.php?spielart=<?= h($r['spielart']) ?>&amp;stufe=<?= h($r['stufe']) ?>&amp;modus=<?= h($r['modus']) ?>"><?= h(t('Alle Ergebnisse')) ?></a>
-  <a class="knopf" href="index.php"><?= h(t('Nochmals üben')) ?></a>
+  <a class="knopf" href="index.php<?= $rechnen ? '?spielart=einmaleins&amp;stufe=' . h($r['stufe']) . '&amp;modus=' . h($r['modus']) : '' ?>"><?= h(t('Nochmals üben')) ?></a>
 </div>
 <?php fuss();

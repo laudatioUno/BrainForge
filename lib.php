@@ -18,6 +18,7 @@ require __DIR__ . '/inc/einstellungen.php';
 require __DIR__ . '/inc/mail.php';
 require __DIR__ . '/inc/avatar.php';
 require __DIR__ . '/inc/profil.php';
+require __DIR__ . '/inc/einmaleins.php';
 
 /*
  * ---- Sprache ----
@@ -445,13 +446,18 @@ function antwortmoeglichkeiten(string $code, string $stufe): array
 
 const STUFEN = ['leicht' => 'Leicht', 'mittel' => 'Mittel', 'schwer' => 'Schwer'];
 
-/** Bezeichnung einer Kombination, z. B. "Umrisse · Mittel · Kurz" oder "Flaggen · Kurz". */
+/** Bezeichnung einer Kombination, z. B. "Umrisse · Mittel · Kurz", "Flaggen · Kurz" oder "1×1 · bis 12 · Blitz". */
 function kombi_name(string $spielart, string $stufe, string $modus): string
 {
-    return $spielart === 'umrisse'
-        ? t('Umrisse') . ' · ' . t(STUFEN[$stufe] ?? $stufe) . ' · ' . modus_name($modus)
-        : t('Flaggen') . ' · ' . modus_name($modus);
+    return match ($spielart) {
+        'umrisse' => t('Umrisse') . ' · ' . t(STUFEN[$stufe] ?? $stufe) . ' · ' . modus_name($modus),
+        'einmaleins' => t('1×1') . ' · ' . t('bis {n}', ['n' => (int)$stufe]) . ' · ' . modus_name($modus),
+        default => t('Flaggen') . ' · ' . modus_name($modus),
+    };
 }
+
+/** Spielarten mit eigener Rangliste. */
+const SPIELARTEN = ['flaggen', 'umrisse', 'einmaleins'];
 
 /** Anzeige der Musterlösung (inkl. Alternativname, wo sinnvoll). */
 function loesung_land(string $code): string
@@ -750,7 +756,7 @@ function db(): PDO
  * Jede Version ist ein Schritt; ein bestehende Datenbank wird über die Seite update.php
  * (mit Sicherungskopie) Schritt für Schritt nachgeführt.
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 /** Die Update-Schritte: Version => [Beschreibung, Funktion]. */
 function db_schritte(): array
@@ -795,6 +801,21 @@ function db_schritte(): array
                 $p->exec('ALTER TABLE resultate ADD COLUMN profil_id INTEGER');
             }
             $p->exec('CREATE INDEX IF NOT EXISTS idx_resultate_profil ON resultate (profil_id)');
+        }],
+        4 => ['Lernstand für das 1×1', function (PDO $p): void {
+            // pro Profil und Rechnung (a × b): wie oft richtig/falsch, Kästchen 0–5, Antwortzeit
+            $p->exec('CREATE TABLE IF NOT EXISTS rechnungen (
+                profil_id INTEGER NOT NULL REFERENCES profile(id) ON DELETE CASCADE,
+                a INTEGER NOT NULL,
+                b INTEGER NOT NULL,
+                richtig INTEGER NOT NULL DEFAULT 0,
+                falsch INTEGER NOT NULL DEFAULT 0,
+                kasten INTEGER NOT NULL DEFAULT 0,
+                zuletzt TEXT NOT NULL,
+                ms_summe INTEGER NOT NULL DEFAULT 0,
+                ms_anzahl INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (profil_id, a, b)
+            )');
         }],
     ];
 }
@@ -874,7 +895,11 @@ function dauer(int $s): string
 
 function modus_name(string $modus): string
 {
-    return $modus === 'kurz' ? t('Kurz') : t('Komplett');
+    return match ($modus) {
+        'kurz' => t('Kurz'),
+        'blitz' => t('Blitz'),
+        default => t('Komplett'),
+    };
 }
 
 /**
@@ -883,16 +908,23 @@ function modus_name(string $modus): string
  */
 function kombi_aus(array $quelle, array $standard = ['flaggen', '', 'kurz']): array
 {
-    $spielart = in_array($quelle['spielart'] ?? '', ['flaggen', 'umrisse'], true) ? $quelle['spielart'] : $standard[0];
-    $stufe = isset(STUFEN[$quelle['stufe'] ?? '']) ? $quelle['stufe'] : ($standard[1] ?: 'mittel');
-    $modus = in_array($quelle['modus'] ?? '', ['kurz', 'komplett'], true) ? $quelle['modus'] : $standard[2];
+    $spielart = in_array($quelle['spielart'] ?? '', SPIELARTEN, true) ? $quelle['spielart'] : $standard[0];
+    if ($spielart === 'einmaleins') {
+        // Stufe = Bereich (10, 12, 15), Umfang = Kurz (20 Aufgaben) oder Blitz (60 Sekunden)
+        $stufe = (string)einmaleins_bis($quelle['stufe'] ?? ($standard[0] === 'einmaleins' ? $standard[1] : ''));
+        $modus = in_array($quelle['modus'] ?? '', ['kurz', 'blitz'], true) ? $quelle['modus'] : 'kurz';
+        return [$spielart, $stufe, $modus];
+    }
+    $stufe = isset(STUFEN[$quelle['stufe'] ?? '']) ? $quelle['stufe'] : (isset(STUFEN[$standard[1]]) ? $standard[1] : 'mittel');
+    $modus = in_array($quelle['modus'] ?? '', ['kurz', 'komplett'], true) ? $quelle['modus'] : ($standard[2] === 'komplett' ? 'komplett' : 'kurz');
     return [$spielart, $spielart === 'umrisse' ? $stufe : '', $modus];
 }
 
 /**
  * Rangliste einer Kombination (Spielart + Stufe + Umfang):
  * beste Prozent zuerst, bei Gleichstand die schnellere Zeit.
- * Gleiche Prozent und gleiche Zeit ergeben den gleichen Rang (1, 2, 2, 4 …).
+ * 1×1 Blitz: am meisten richtige zuerst, bei Gleichstand die bessere Quote.
+ * Gleicher Wert ergibt den gleichen Rang (1, 2, 2, 4 …).
  */
 function rangliste(string $spielart, string $stufe, string $modus): array
 {
@@ -901,17 +933,22 @@ function rangliste(string $spielart, string $stufe, string $modus): array
         r.punkte, r.max_punkte, r.prozent, r.dauer_sek
         FROM resultate r LEFT JOIN profile p ON p.id = r.profil_id
         WHERE r.spielart = ? AND r.stufe = ? AND r.modus = ?
-        ORDER BY r.prozent DESC, r.dauer_sek ASC, r.id ASC');
-    $st->execute([$spielart, $spielart === 'umrisse' ? $stufe : '', $modus]);
+        ORDER BY ' . (ist_blitz($spielart, $modus) ? 'r.punkte DESC, r.prozent DESC' : 'r.prozent DESC, r.dauer_sek ASC') . ', r.id ASC');
+    $st->execute([$spielart, $spielart === 'flaggen' ? '' : $stufe, $modus]);
     $zeilen = $st->fetchAll();
     $vorher = null;
     foreach ($zeilen as $i => &$z) {
-        $schluessel = $z['prozent'] . '|' . $z['dauer_sek'];
+        $schluessel = ist_blitz($spielart, $modus) ? $z['punkte'] . '|' . $z['prozent'] : $z['prozent'] . '|' . $z['dauer_sek'];
         $z['rang'] = ($vorher !== null && $vorher[0] === $schluessel) ? $vorher[1] : $i + 1;
         $vorher = [$schluessel, $z['rang']];
     }
     unset($z);
     return $zeilen;
+}
+
+function ist_blitz(string $spielart, string $modus): bool
+{
+    return $spielart === 'einmaleins' && $modus === 'blitz';
 }
 
 /** Name in Ranglisten: mit Profil-Icon, oder als Gast markiert. */
@@ -931,7 +968,7 @@ function rangliste_tabelle(array $zeilen, string $spielart, ?int $markiert = nul
         return;
     }
     $badge = $badge !== '' ? $badge : t('neu');
-    $umrisse = $spielart === 'umrisse';
+    $umrisse = $spielart !== 'flaggen'; // Umrisse und 1×1: eine Spalte «Richtig»
     echo '<table class="liste"><thead><tr><th class="r">' . h(t('Rang')) . '</th><th>' . h(t('Name')) . '</th>'
         . ($umrisse ? '<th>' . h(t('Richtig')) . '</th>'
             : '<th>' . h(t('Länder')) . '</th><th>' . h(t('Hauptstädte')) . '</th><th>' . h(t('Punkte')) . '</th>')
@@ -988,10 +1025,13 @@ function kopf_rechts(): string
     return '<a class="profil-chip ohne" href="profil-neu.php">' . h(t('Profil erstellen')) . '</a>';
 }
 
-/** Zusätzliche Anzeige im Profil-Knopf (z. B. Serie). */
+/** Zusätzliche Anzeige im Profil-Knopf: die Serie (Tage am Stück), ab 2 Tagen. */
 function kopf_extra(array $profil): string
 {
-    return '';
+    [$aktuell] = serie((int)$profil['id']);
+    return $aktuell >= 2
+        ? ' <span class="serie-chip" title="' . h(t('{n} Tage am Stück geübt', ['n' => $aktuell])) . '">🔥 ' . $aktuell . '</span>'
+        : '';
 }
 
 function fuss(): void

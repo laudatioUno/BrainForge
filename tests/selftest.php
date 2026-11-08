@@ -160,9 +160,67 @@ db_migrieren($alt);
 pruefen((int)$alt->query('PRAGMA user_version')->fetchColumn() === DB_VERSION, 'Migration: Version nicht aktuell');
 $z = $alt->query('SELECT * FROM resultate')->fetch();
 pruefen($z['name'] === 'Alt' && $z['spielart'] === 'flaggen' && $z['profil_id'] === null, 'Migration: altes Resultat verändert');
-foreach (['profile', 'geraete', 'drossel'] as $tabelle) {
+foreach (['profile', 'geraete', 'drossel', 'rechnungen'] as $tabelle) {
     pruefen((bool)$alt->query("SELECT 1 FROM sqlite_master WHERE name = '$tabelle'")->fetchColumn(), "Migration: Tabelle $tabelle fehlt");
 }
+
+// 1×1: range, combinations, answers
+pruefen(einmaleins_bis('12') === 12 && einmaleins_bis('11') === 10 && einmaleins_bis(null) === 10, '1×1: Bereich');
+pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => '15', 'modus' => 'blitz']) === ['einmaleins', '15', 'blitz'], '1×1: Kombination');
+pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => 'mittel', 'modus' => 'komplett']) === ['einmaleins', '10', 'kurz'], '1×1: ungültige Kombination');
+pruefen(kombi_aus(['spielart' => 'umrisse'], ['einmaleins', '12', 'blitz']) === ['umrisse', 'mittel', 'kurz'], '1×1: Wechsel zu Umrisse');
+pruefen(rechnung_eingabe(' 56 ') === 56 && rechnung_eingabe('5a') === null && rechnung_eingabe('') === null && rechnung_eingabe('-4') === null, '1×1: Eingabe lesen');
+
+// Drawing: right number, in range, no duplicates, never the same task (or its swap) twice in a row
+foreach (EINMALEINS_BIS as $bis) {
+    for ($i = 0; $i < 20; $i++) {
+        $l = rechnungen_ziehen($bis, EINMALEINS_KURZ, [], false);
+        $schl = array_map(fn($x) => $x['a'] . '×' . $x['b'], $l);
+        pruefen(count($l) === EINMALEINS_KURZ && count(array_unique($schl)) === EINMALEINS_KURZ, "1×1: Ziehen bis $bis");
+        foreach ($l as $j => $x) {
+            pruefen($x['a'] >= 1 && $x['a'] <= $bis && $x['b'] >= 1 && $x['b'] <= $bis && $x['w'] === 0, "1×1: ausserhalb des Bereichs bis $bis");
+            pruefen($j === 0 || !rechnung_gleich($x, $l[$j - 1]), '1×1: gleiche Rechnung hintereinander');
+        }
+    }
+}
+// Learning state: tasks to practise come for sure, mastered ones less often
+$stand = [];
+for ($a = 1; $a <= 10; $a++) {
+    for ($b = 1; $b <= 10; $b++) {
+        $stand["{$a}×{$b}"] = ['a' => $a, 'b' => $b, 'richtig' => 5, 'falsch' => 0, 'kasten' => 5, 'zuletzt' => '2026-01-01 10:00:00'];
+    }
+}
+$stand['7×8'] = ['a' => 7, 'b' => 8, 'richtig' => 1, 'falsch' => 3, 'kasten' => 0, 'zuletzt' => '2026-01-02 10:00:00'];
+$stand['6×9'] = ['a' => 6, 'b' => 9, 'richtig' => 1, 'falsch' => 1, 'kasten' => 0, 'zuletzt' => '2026-01-01 09:00:00'];
+for ($i = 0; $i < 10; $i++) {
+    $schl = array_map(fn($x) => $x['a'] . '×' . $x['b'], rechnungen_ziehen(10, EINMALEINS_KURZ, $stand, true));
+    pruefen(in_array('7×8', $schl, true) && in_array('6×9', $schl, true), '1×1: zu übende Rechnungen fehlen');
+}
+pruefen(rechnung_gewicht(7, 8, $stand['7×8'], true) > 5 * rechnung_gewicht(7, 7, $stand['7×7'], true), '1×1: Gewicht falsch/sitzt');
+pruefen(rechnung_gewicht(1, 8, null, false) < rechnung_gewicht(7, 8, null, false), '1×1: ×1 sollte seltener sein');
+pruefen(rechnung_stand(null) === 'neu' && rechnung_stand($stand['7×8']) === 'ueben' && rechnung_stand($stand['7×7']) === 'sitzt'
+    && rechnung_stand(['richtig' => 1, 'falsch' => 0, 'kasten' => 1]) === 'unsicher', '1×1: Stand für die Farbkarte');
+pruefen(reihe_sitzt($stand, 2) && !reihe_sitzt($stand, 7) && !reihe_sitzt($stand, 8), '1×1: Reihe gemeistert');
+
+// Streak: today or yesterday keeps it running; gaps end it
+pruefen(serie_aus_tagen([], '2026-11-08') === [0, 0], 'Serie: leer');
+pruefen(serie_aus_tagen(['2026-11-08', '2026-11-07', '2026-11-06', '2026-11-01', '2026-10-31'], '2026-11-08') === [3, 3], 'Serie: heute');
+pruefen(serie_aus_tagen(['2026-11-07', '2026-11-06'], '2026-11-08') === [2, 2], 'Serie: gestern läuft noch');
+pruefen(serie_aus_tagen(['2026-11-05', '2026-11-04', '2026-11-03', '2026-11-02'], '2026-11-08') === [0, 4], 'Serie: abgebrochen');
+pruefen(serie_aus_tagen(['2026-03-01', '2026-02-28'], '2026-03-01') === [2, 2], 'Serie: über das Monatsende');
+
+// Learning state in the database (migration 4): right moves one box up, wrong back to 0
+$alt->exec("INSERT INTO profile (name, email, avatar, link_hash, erstellt) VALUES ('P', 'p@example.ch', '0a1b2c3d', 'h', '2026-01-01 10:00:00')");
+foreach ([true, true, true, false, true] as $ok) {
+    rechnung_merken(1, 7, 8, $ok, 1500, $alt);
+}
+$z = $alt->query('SELECT * FROM rechnungen WHERE profil_id = 1 AND a = 7 AND b = 8')->fetch();
+pruefen((int)$z['richtig'] === 4 && (int)$z['falsch'] === 1 && (int)$z['kasten'] === 1 && (int)$z['ms_anzahl'] === 5 && (int)$z['ms_summe'] === 7500, '1×1: Lernstand speichern');
+for ($i = 0; $i < 8; $i++) {
+    rechnung_merken(1, 7, 8, true, 999999, $alt);
+}
+$z = $alt->query('SELECT kasten, ms_summe FROM rechnungen WHERE profil_id = 1 AND a = 7 AND b = 8')->fetch();
+pruefen((int)$z['kasten'] === KASTEN_MAX && (int)$z['ms_summe'] === 7500 + 8 * 60000, '1×1: Kästchen höchstens 5, Zeit begrenzt');
 
 pruefen((bool)preg_match('/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/', APP_VERSION), 'APP_VERSION hat nicht die Form 1.2.3');
 
