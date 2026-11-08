@@ -3,6 +3,9 @@ declare(strict_types=1);
 require __DIR__ . '/lib.php';
 
 [$spielart, $stufe, $modus] = kombi_aus($_GET);
+if ($spielart === 'einmaleins' && $modus === 'noetig') {
+    $modus = 'alle'; // «Nur was nötig ist» hat keine Rangliste
+}
 $filter = trim((string)($_GET['name'] ?? ''));
 $kombi = kombi_name($spielart, $stufe, $modus);
 
@@ -44,7 +47,7 @@ if (isset($_GET['csv'])) {
 // Anzahl Resultate je Spielart, Stufe und Umfang (für die Zahlen in den Reitern)
 $zahl = ['flaggen' => 0, 'umrisse' => 0, 'einmaleins' => 0];
 $zahlStufe = [];
-$modi = $spielart === 'einmaleins' ? ['kurz', 'blitz'] : ['kurz', 'komplett'];
+$modi = $spielart === 'einmaleins' ? ['alle', 'blitz'] : ['kurz', 'komplett'];
 $zahlModus = array_fill_keys($modi, 0);
 foreach (db()->query('SELECT spielart, stufe, modus, COUNT(*) AS n FROM resultate GROUP BY spielart, stufe, modus') as $g) {
     $zahl[$g['spielart']] = ($zahl[$g['spielart']] ?? 0) + (int)$g['n'];
@@ -66,7 +69,7 @@ kopf(t('Ergebnisse'));
 <nav class="tabs" aria-label="<?= h(t('Spielart')) ?>">
   <a href="<?= h(link_zu(['spielart' => 'flaggen'])) ?>" class="<?= $spielart === 'flaggen' ? 'aktiv' : '' ?>"><?= h(t('Flaggen')) ?> <span><?= $zahl['flaggen'] ?></span></a>
   <a href="<?= h(link_zu(['spielart' => 'umrisse', 'stufe' => 'mittel', 'modus' => 'kurz'])) ?>" class="<?= $spielart === 'umrisse' ? 'aktiv' : '' ?>"><?= h(t('Umrisse')) ?> <span><?= $zahl['umrisse'] ?></span></a>
-  <a href="<?= h(link_zu(['spielart' => 'einmaleins', 'stufe' => (string)EINMALEINS_BIS[0], 'modus' => 'kurz'])) ?>" class="<?= $spielart === 'einmaleins' ? 'aktiv' : '' ?>"><?= h(t('1×1')) ?> <span><?= $zahl['einmaleins'] ?></span></a>
+  <a href="<?= h(link_zu(['spielart' => 'einmaleins', 'stufe' => (string)EINMALEINS_BIS[0], 'modus' => 'alle'])) ?>" class="<?= $spielart === 'einmaleins' ? 'aktiv' : '' ?>"><?= h(t('1×1')) ?> <span><?= $zahl['einmaleins'] ?></span></a>
 </nav>
 
 <div class="karte auswahl-leiste">

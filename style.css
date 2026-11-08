@@ -556,3 +556,35 @@ tr.wiederholung td { opacity: .8; }
   .verlauf a { grid-template-columns: 3.2em minmax(0, 1fr) auto; }
   .v-art { display: none; }
 }
+
+/* ---- 1×1 2.0: Modi, Tagesziel, Reihen, Bestwerte ---- */
+.wahl-modi { display: grid; gap: 8px; }
+.wahl-modi .wahl { align-items: flex-start; }
+.tagesziel { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-size: .9rem; }
+.tagesziel > span:first-child { font-weight: 700; }
+.tagesziel.erreicht { background: var(--ok-bg); color: var(--ok); }
+.ziel-balken, .r-balken { display: block; height: 10px; border-radius: 99px; background: var(--linie); overflow: hidden; }
+.ziel-balken span, .r-balken span { display: block; height: 100%; border-radius: 99px; background: var(--akzent); }
+.tagesziel.erreicht .ziel-balken span, .reihen .fertig .r-balken span { background: var(--ok); }
+.ziel-zahl { color: var(--leise); white-space: nowrap; }
+.tagesziel.erreicht .ziel-zahl { color: var(--ok); }
+.erfolge { padding: 14px 18px; margin-bottom: 20px; display: grid; gap: 10px; }
+.rekord { margin: 0; font-size: 1.05rem; }
+.woche { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.woche li { display: grid; justify-items: center; gap: 4px; }
+.w-saeule { position: relative; width: 100%; max-width: 34px; height: 64px; border-radius: 6px; background: var(--bg); overflow: hidden; display: flex; align-items: flex-end; }
+.w-saeule > span { display: block; width: 100%; background: var(--akzent); opacity: .55; }
+.woche .erreicht .w-saeule > span { background: var(--ok); opacity: 1; }
+.w-saeule i { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--leise); opacity: .6; }
+.w-tag { font-size: .75rem; color: var(--leise); }
+.reihen { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px 20px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.reihen li { display: grid; grid-template-columns: 6.5em 1fr 3em; align-items: center; gap: 10px; font-size: .9rem; }
+.r-wert { text-align: right; color: var(--leise); font-variant-numeric: tabular-nums; }
+.reihen .fertig .r-wert { color: var(--ok); font-weight: 700; }
+.bestwerte th[scope=row] { text-align: left; }
+.ziel-wahl { display: flex; gap: 8px; }
+.ziel-wahl select { width: auto; }
+@media (max-width: 520px) {
+  .tagesziel { grid-template-columns: 1fr auto; }
+  .tagesziel .ziel-balken { grid-column: 1 / -1; grid-row: 2; }
+}

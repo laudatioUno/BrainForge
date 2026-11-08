@@ -3,8 +3,9 @@ declare(strict_types=1);
 require __DIR__ . '/lib.php';
 
 /*
- * Eine 1×1-Runde. Kurz: 20 Aufgaben, die Zeit zählt. Blitz: so viele wie möglich in 60 Sekunden.
- * Eine falsche Rechnung kommt drei Aufgaben später nochmals (bei Kurz als Wiederholung, die
+ * Eine 1×1-Runde. Alle: jede Aufgabe einmal. Nur was nötig ist: höchstens 20, die gerade dran sind.
+ * Blitz: so viele wie möglich in 60 Sekunden.
+ * Eine falsche Rechnung kommt drei Aufgaben später nochmals (bei Alle/Nötig als Wiederholung, die
  * nicht zählt; bei Blitz als normale Aufgabe). Mit Profil wird jede Antwort im Lernstand gemerkt.
  */
 $r = &$_SESSION['rechnen'];
@@ -15,7 +16,7 @@ if (!$r) {
 }
 $blitz = $r['modus'] === 'blitz';
 
-/** Zählt eine Antwort für das Ergebnis? (Kurz: Wiederholungen nicht) */
+/** Zählt eine Antwort für das Ergebnis? (Alle/Nötig: Wiederholungen nicht) */
 function zaehlt(array $antwort, bool $blitz): bool
 {
     return $blitz || empty($antwort['w']);
@@ -65,13 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && hash_equals($r['token'], (string)($
             }
             if (!$ok) {
                 // drei Aufgaben später nochmals (höchstens zweimal dieselbe Rechnung wiederholen)
-                $schluessel = $auf['a'] . '×' . $auf['b'];
+                $schluessel = rechnung_schluessel($auf['a'], $auf['b']);
                 $r['wiederholt'][$schluessel] = ($r['wiederholt'][$schluessel] ?? 0) + 1;
                 if ($r['wiederholt'][$schluessel] <= 2) {
                     array_splice($r['aufgaben'], min($pos + 4, count($r['aufgaben'])), 0, [['a' => $auf['a'], 'b' => $auf['b'], 'w' => 1]]);
                 }
             }
-            $r['letzte'] = ['a' => $auf['a'], 'b' => $auf['b'], 'e' => $eingabe, 'ok' => $ok, 'nochmals' => !$ok && ($r['wiederholt'][$auf['a'] . '×' . $auf['b']] ?? 0) <= 2];
+            $r['letzte'] = ['a' => $auf['a'], 'b' => $auf['b'], 'e' => $eingabe, 'ok' => $ok, 'nochmals' => !$ok && ($r['wiederholt'][rechnung_schluessel($auf['a'], $auf['b'])] ?? 0) <= 2];
             $r['pos']++;
             if ($blitz && $r['pos'] >= count($r['aufgaben']) - 5) {
                 // Blitz: Nachschub, damit die Aufgaben nie ausgehen
@@ -100,8 +101,9 @@ $r['seit_pos'] = $pos;
 $letzte = $r['letzte'];
 $gezaehlt = array_filter($r['antworten'], fn($x) => zaehlt($x, $blitz));
 $richtig = count(array_filter($gezaehlt, fn($x) => $x['ok']));
-// Kurz: Nummer der Aufgabe ohne Wiederholungen
+// Alle/Nötig: Nummer der Aufgabe ohne Wiederholungen
 $nummer = 1 + count(array_filter(array_slice($r['aufgaben'], 0, $pos), fn($x) => empty($x['w'])));
+$gesamt = (int)($r['gesamt'] ?? count($r['aufgaben']));
 $rest = $blitz ? max(0, (int)ceil($r['ende'] - microtime(true))) : 0;
 
 kopf(t('1×1'));
@@ -116,13 +118,16 @@ kopf(t('1×1'));
     <span><?= h(t('Noch')) ?> <strong id="uhr" data-ende="<?= (int)round(($r['ende'] - microtime(true)) * 1000) ?>"><?= sprintf('%d:%02d', intdiv($rest, 60), $rest % 60) ?></strong></span>
     <span><?= h(t('Richtig')) ?>: <strong><?= $richtig ?></strong></span>
   <?php else: ?>
-    <span><?= t('Aufgabe {nr} von {n}', ['nr' => '<strong>' . min($nummer, EINMALEINS_KURZ) . '</strong>', 'n' => EINMALEINS_KURZ]) ?></span>
+    <span><?= t('Aufgabe {nr} von {n}', ['nr' => '<strong>' . min($nummer, $gesamt) . '</strong>', 'n' => $gesamt]) ?></span>
     <span><?= h(t('Richtig')) ?>: <strong><?= $richtig ?></strong> / <?= count($gezaehlt) ?></span>
   <?php endif; ?>
 </div>
-<div class="balken"><span style="width: <?= $blitz ? round($rest / BLITZ_SEKUNDEN * 100, 1) : round(count($gezaehlt) / EINMALEINS_KURZ * 100, 1) ?>%"></span></div>
+<div class="balken"><span style="width: <?= $blitz ? round($rest / BLITZ_SEKUNDEN * 100, 1) : round(count($gezaehlt) / max(1, $gesamt) * 100, 1) ?>%"></span></div>
 
 <section class="karte einzel rechnen">
+  <?php if (!empty($r['auffrischen']) && $pos === 0): ?>
+    <p class="hinweis-ok"><?= h(t('Heute ist nichts fällig – super! Hier ein paar Aufgaben zum Auffrischen.')) ?></p>
+  <?php endif; ?>
   <?php if ($letzte): ?>
     <p class="rueck <?= $letzte['ok'] ? 'ok' : 'falsch' ?>" role="status">
       <?php if ($letzte['ok']): ?>

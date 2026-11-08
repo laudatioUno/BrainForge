@@ -3,6 +3,28 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [2.0.0] – 2026-11
+
+The 1×1 is complete: three ways to practise, real spaced repetition, daily goal and more statistics.
+
+### Added
+- **Three ways to practise the 1×1** (for every range 10 / 12 / 15):
+  - **Nur was nötig ist** (default): at most 20 tasks – first the ones answered wrong, then the ones due again, then new ones. If nothing is due, 10 tasks to refresh. The start page shows how many tasks are due today. Guests get 20 mixed tasks.
+  - **Alle**: every task exactly once – 55, 78 or 120 tasks. 7 × 8 and 8 × 7 count as one task and are asked in either order. Ranked by percentage, then time.
+  - **Blitz**: as before, 60 seconds, ranked by the number of right answers.
+- **Spaced repetition**: a task is due again after 0, 1, 2, 4, 8 or 16 days, depending on its box (still invisible for the children).
+- **Daily goal**: 20, 30 (default), 50 or 100 tasks a day, or none (setting on the profile page). Progress bar on the start page and after each round, a week chart on the statistics page, two new badges (*Ziel erreicht*, *Zielstrebig*: 10 days).
+- **Progress per times table** on the statistics page: how many tasks of each table are mastered.
+- **Best values** per range on the statistics page: best Blitz, best *Alle* round, fastest pace. **Neuer Rekord!** after a round that beats the best Blitz or *Alle* round.
+- Badge *Alles einmal* for a finished *Alle* round; *Fehlerfrei* now counts any round with at least 10 tasks.
+
+### Changed
+- **7 × 8 and 8 × 7 are one task** in the learning state, the colour map (now symmetric) and the counts (55 / 78 / 120).
+- *Kurz* is replaced by *Nur was nötig ist*, which has no ranking because every child gets different tasks. The rankings show *Alle* and *Blitz*. Old links with `modus=kurz` open *Nur was nötig ist*.
+
+### Database
+- Version 5: swapped tasks are merged (the weaker box counts), existing *Kurz* rounds become *Nur was nötig ist*, profiles get the column `tagesziel`. Run the update via `update.php` (a backup is made first).
+
 ## [1.5.0] – 2026-11
 
 ### Added
