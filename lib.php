@@ -756,7 +756,7 @@ function db(): PDO
  * Jede Version ist ein Schritt; ein bestehende Datenbank wird über die Seite update.php
  * (mit Sicherungskopie) Schritt für Schritt nachgeführt.
  */
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 /** Die Update-Schritte: Version => [Beschreibung, Funktion]. */
 function db_schritte(): array
@@ -816,6 +816,33 @@ function db_schritte(): array
                 ms_anzahl INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (profil_id, a, b)
             )');
+        }],
+        5 => ['Tauschaufgaben gemeinsam, Tagesziel', function (PDO $p): void {
+            // 7 × 8 und 8 × 7 sind dieselbe Aufgabe: zusammenlegen (a ≤ b), das schwächere Kästchen zählt
+            $p->exec('CREATE TABLE rechnungen_neu (
+                profil_id INTEGER NOT NULL REFERENCES profile(id) ON DELETE CASCADE,
+                a INTEGER NOT NULL,
+                b INTEGER NOT NULL,
+                richtig INTEGER NOT NULL DEFAULT 0,
+                falsch INTEGER NOT NULL DEFAULT 0,
+                kasten INTEGER NOT NULL DEFAULT 0,
+                zuletzt TEXT NOT NULL,
+                ms_summe INTEGER NOT NULL DEFAULT 0,
+                ms_anzahl INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (profil_id, a, b)
+            )');
+            $p->exec('INSERT INTO rechnungen_neu
+                SELECT profil_id, MIN(a, b), MAX(a, b), SUM(richtig), SUM(falsch), MIN(kasten), MAX(zuletzt), SUM(ms_summe), SUM(ms_anzahl)
+                FROM rechnungen GROUP BY profil_id, MIN(a, b), MAX(a, b)');
+            $p->exec('DROP TABLE rechnungen');
+            $p->exec('ALTER TABLE rechnungen_neu RENAME TO rechnungen');
+            // Tagesziel: Anzahl 1×1-Aufgaben pro Tag (0 = aus)
+            $spalten = array_column($p->query('PRAGMA table_info(profile)')->fetchAll(), 'name');
+            if (!in_array('tagesziel', $spalten, true)) {
+                $p->exec('ALTER TABLE profile ADD COLUMN tagesziel INTEGER NOT NULL DEFAULT ' . TAGESZIEL_STANDARD);
+            }
+            // «Kurz» beim 1×1 heisst jetzt «Nur was nötig ist»
+            $p->exec("UPDATE resultate SET modus = 'noetig' WHERE spielart = 'einmaleins' AND modus = 'kurz'");
         }],
     ];
 }
@@ -898,6 +925,8 @@ function modus_name(string $modus): string
     return match ($modus) {
         'kurz' => t('Kurz'),
         'blitz' => t('Blitz'),
+        'alle' => t('Alle'),
+        'noetig' => t('Nur was nötig ist'),
         default => t('Komplett'),
     };
 }
@@ -910,9 +939,10 @@ function kombi_aus(array $quelle, array $standard = ['flaggen', '', 'kurz']): ar
 {
     $spielart = in_array($quelle['spielart'] ?? '', SPIELARTEN, true) ? $quelle['spielart'] : $standard[0];
     if ($spielart === 'einmaleins') {
-        // Stufe = Bereich (10, 12, 15), Umfang = Kurz (20 Aufgaben) oder Blitz (60 Sekunden)
+        // Stufe = Bereich (10, 12, 15), Umfang = Alle, Nur was nötig ist oder Blitz (60 Sekunden)
         $stufe = (string)einmaleins_bis($quelle['stufe'] ?? ($standard[0] === 'einmaleins' ? $standard[1] : ''));
-        $modus = in_array($quelle['modus'] ?? '', ['kurz', 'blitz'], true) ? $quelle['modus'] : 'kurz';
+        $modus = $quelle['modus'] ?? '';
+        $modus = $modus === 'kurz' ? 'noetig' : (in_array($modus, EINMALEINS_MODI, true) ? $modus : 'noetig');
         return [$spielart, $stufe, $modus];
     }
     $stufe = isset(STUFEN[$quelle['stufe'] ?? '']) ? $quelle['stufe'] : (isset(STUFEN[$standard[1]]) ? $standard[1] : 'mittel');

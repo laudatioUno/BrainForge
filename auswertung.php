@@ -73,6 +73,11 @@ if ($rechnen) {
     $ms = array_column($details, 'ms');
     $tempo = $ms ? array_sum($ms) / count($ms) / 1000 : 0;
 }
+// 1×1 mit eigenem Profil: Tagesziel und Rekord
+$meinRechnen = $rechnen && $ich !== null && (int)$r['profil_id'] === (int)$ich['id'];
+$rangliste = !($rechnen && $r['modus'] === 'noetig'); // «Nur was nötig ist» ist für jedes Kind anders: keine Rangliste
+$zielStand = $meinRechnen ? tagesziel_stand($ich, substr($r['zeit'], 0, 10)) : null;
+$rekord = $meinRechnen && ist_rekord($r, einmaleins_runden((int)$ich['id']));
 $lob = $p >= 95 ? t('Hervorragend!') : ($p >= 80 ? t('Sehr gut!') : ($p >= 60 ? t('Gut gemacht, weiter üben!') : t('Da geht noch mehr, übe die roten Felder nochmals.')));
 
 function zelle(string $eingabe, string $status, string $loesung): string
@@ -126,6 +131,23 @@ kopf(t('Auswertung'));
 </section>
 <?php endif; ?>
 
+<?php if ($rekord || $zielStand !== null): ?>
+<section class="karte erfolge">
+  <?php if ($rekord): ?>
+    <p class="rekord">🏅 <strong><?= h(t('Neuer Rekord!')) ?></strong> <?= h($blitz ? t('So viele richtige hattest du in einer Blitz-Runde noch nie.') : t('Deine beste Runde «Alle» bis jetzt.')) ?></p>
+  <?php endif; ?>
+  <?php if ($zielStand !== null): [$heute, $soll] = $zielStand; ?>
+    <div class="tagesziel<?= $heute >= $soll ? ' erreicht' : '' ?>">
+      <span><?= $heute >= $soll ? '🎯 ' . h(t('Tagesziel erreicht!')) : h(t('Tagesziel')) ?></span>
+      <span class="ziel-balken" role="progressbar" aria-valuemin="0" aria-valuemax="<?= $soll ?>" aria-valuenow="<?= min($heute, $soll) ?>"
+            aria-label="<?= h(t('Tagesziel')) ?>"><span style="width: <?= round(min(1, $heute / $soll) * 100) ?>%"></span></span>
+      <span class="ziel-zahl"><?= h($heute >= $soll ? t('{n} von {ziel} Aufgaben', ['n' => $heute, 'ziel' => $soll]) : t('noch {n} bis zum Ziel', ['n' => $soll - $heute])) ?></span>
+    </div>
+  <?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if ($rangliste): ?>
 <section class="karte platzierung">
   <div class="platz">
     <span class="platz-nr"><?= $platz ?>.</span>
@@ -147,6 +169,9 @@ kopf(t('Auswertung'));
   if (zeile) box.scrollTop = zeile.offsetTop - box.clientHeight / 2 + zeile.offsetHeight;
 })();
 </script>
+<?php else: ?>
+<p class="klein"><?= h(t('«Nur was nötig ist» ist für alle anders, darum gibt es dafür keine Rangliste. Für die Rangliste: «Alle» oder «Blitz».')) ?></p>
+<?php endif; ?>
 
 <h2 class="zwischentitel"><?= h($eigenes ? t('Deine Antworten') : t('Antworten')) ?></h2>
 <div class="karte tabelle-wrap">
@@ -208,10 +233,10 @@ kopf(t('Auswertung'));
 <?php endif; ?>
 
 <div class="abschluss">
-  <?php if ($rechnen && $ich !== null && (int)$r['profil_id'] === (int)$ich['id']): ?>
+  <?php if ($meinRechnen): ?>
     <a class="sekundaer" href="statistik.php"><?= h(t('Meine 1×1-Statistik')) ?></a>
   <?php endif; ?>
-  <a class="sekundaer" href="ergebnisse.php?spielart=<?= h($r['spielart']) ?>&amp;stufe=<?= h($r['stufe']) ?>&amp;modus=<?= h($r['modus']) ?>"><?= h(t('Alle Ergebnisse')) ?></a>
+  <a class="sekundaer" href="ergebnisse.php?spielart=<?= h($r['spielart']) ?>&amp;stufe=<?= h($r['stufe']) ?>&amp;modus=<?= h($rangliste ? $r['modus'] : 'alle') ?>"><?= h(t('Alle Ergebnisse')) ?></a>
   <a class="knopf" href="index.php<?= $rechnen ? '?spielart=einmaleins&amp;stufe=' . h($r['stufe']) . '&amp;modus=' . h($r['modus']) : '' ?>"><?= h(t('Nochmals üben')) ?></a>
 </div>
 <?php fuss();

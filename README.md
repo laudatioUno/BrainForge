@@ -14,7 +14,11 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 - Answer options from neighbouring countries or similar flags, shuffled anew every time
 - Tolerant answer checking: umlauts, case and small typos don't matter, words that sound the same count (Lichtenstein, Warshau), the correct spelling is always shown
 - *Kurz* (15 random countries) or *Komplett* (all 46)
-- **Multiplication tables** (*1×1*): up to 10, 12 or 15 (slider), *Kurz* (20 tasks, time counts) or *Blitz* (as many as possible in 60 seconds)
+- **Multiplication tables** (*1×1*): up to 10, 12 or 15 (slider)
+  - *Nur was nötig ist*: at most 20 tasks that are due (wrong ones first, spaced repetition in the background)
+  - *Alle*: every task once (55 / 78 / 120; 7 × 8 and 8 × 7 count as one)
+  - *Blitz*: as many as possible in 60 seconds
+  - statistics per profile: colour map, progress per times table, daily goal, best values, badges, streak
   - A wrong task comes back three tasks later; with a profile, every task's learning state is kept, so wrong and unsure ones come more often in the next rounds and mastered ones less
   - Statistics per profile: the table as a colour map (mastered / unsure / to practise / new), badges, streak (days in a row, also next to the profile button) and history of the last rounds
 - Results stored in SQLite; evaluation at the end with the place in the ranking

@@ -167,40 +167,87 @@ foreach (['profile', 'geraete', 'drossel', 'rechnungen'] as $tabelle) {
 // 1×1: range, combinations, answers
 pruefen(einmaleins_bis('12') === 12 && einmaleins_bis('11') === 10 && einmaleins_bis(null) === 10, '1×1: Bereich');
 pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => '15', 'modus' => 'blitz']) === ['einmaleins', '15', 'blitz'], '1×1: Kombination');
-pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => 'mittel', 'modus' => 'komplett']) === ['einmaleins', '10', 'kurz'], '1×1: ungültige Kombination');
+pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => 'mittel', 'modus' => 'komplett']) === ['einmaleins', '10', 'noetig'], '1×1: ungültige Kombination');
+pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => '12', 'modus' => 'kurz']) === ['einmaleins', '12', 'noetig'], '1×1: alter Link mit Kurz');
+pruefen(kombi_aus(['spielart' => 'einmaleins', 'stufe' => '12', 'modus' => 'alle']) === ['einmaleins', '12', 'alle'], '1×1: Alle');
 pruefen(kombi_aus(['spielart' => 'umrisse'], ['einmaleins', '12', 'blitz']) === ['umrisse', 'mittel', 'kurz'], '1×1: Wechsel zu Umrisse');
 pruefen(rechnung_eingabe(' 56 ') === 56 && rechnung_eingabe('5a') === null && rechnung_eingabe('') === null && rechnung_eingabe('-4') === null, '1×1: Eingabe lesen');
 
-// Drawing: right number, in range, no duplicates, never the same task (or its swap) twice in a row
+// Drawing: right number, in range, no duplicates (swapped tasks count as the same), never the same task twice in a row
 foreach (EINMALEINS_BIS as $bis) {
     for ($i = 0; $i < 20; $i++) {
-        $l = rechnungen_ziehen($bis, EINMALEINS_KURZ, [], false);
-        $schl = array_map(fn($x) => $x['a'] . '×' . $x['b'], $l);
-        pruefen(count($l) === EINMALEINS_KURZ && count(array_unique($schl)) === EINMALEINS_KURZ, "1×1: Ziehen bis $bis");
+        $l = rechnungen_ziehen($bis, EINMALEINS_NOETIG_MAX, [], false);
+        $schl = array_map(fn($x) => rechnung_schluessel($x['a'], $x['b']), $l);
+        pruefen(count($l) === EINMALEINS_NOETIG_MAX && count(array_unique($schl)) === EINMALEINS_NOETIG_MAX, "1×1: Ziehen bis $bis");
         foreach ($l as $j => $x) {
             pruefen($x['a'] >= 1 && $x['a'] <= $bis && $x['b'] >= 1 && $x['b'] <= $bis && $x['w'] === 0, "1×1: ausserhalb des Bereichs bis $bis");
             pruefen($j === 0 || !rechnung_gleich($x, $l[$j - 1]), '1×1: gleiche Rechnung hintereinander');
         }
     }
+    // «Alle»: every task exactly once, swapped tasks once
+    $l = rechnungen_alle($bis);
+    $schl = array_map(fn($x) => rechnung_schluessel($x['a'], $x['b']), $l);
+    pruefen(count($l) === paare_anzahl($bis) && count(array_unique($schl)) === paare_anzahl($bis), "1×1: Alle bis $bis");
 }
+pruefen(paare_anzahl(10) === 55 && paare_anzahl(12) === 78 && paare_anzahl(15) === 120, '1×1: Anzahl Aufgaben');
+pruefen(rechnung_schluessel(8, 7) === '7×8' && rechnung_schluessel(7, 8) === '7×8', '1×1: Tauschaufgabe gleicher Schlüssel');
+$dreh = 0;
+for ($i = 0; $i < 200; $i++) {
+    $dreh += rechnungen_alle(10)[0]['a'] > rechnungen_alle(10)[0]['b'] ? 1 : 0;
+}
+pruefen($dreh > 20 && $dreh < 180, '1×1: Richtung wird nicht gemischt');
+
 // Learning state: tasks to practise come for sure, mastered ones less often
 $stand = [];
 for ($a = 1; $a <= 10; $a++) {
-    for ($b = 1; $b <= 10; $b++) {
-        $stand["{$a}×{$b}"] = ['a' => $a, 'b' => $b, 'richtig' => 5, 'falsch' => 0, 'kasten' => 5, 'zuletzt' => '2026-01-01 10:00:00'];
+    for ($b = $a; $b <= 10; $b++) {
+        $stand["{$a}×{$b}"] = ['a' => $a, 'b' => $b, 'richtig' => 5, 'falsch' => 0, 'kasten' => 5, 'zuletzt' => '2026-11-01 10:00:00'];
     }
 }
-$stand['7×8'] = ['a' => 7, 'b' => 8, 'richtig' => 1, 'falsch' => 3, 'kasten' => 0, 'zuletzt' => '2026-01-02 10:00:00'];
-$stand['6×9'] = ['a' => 6, 'b' => 9, 'richtig' => 1, 'falsch' => 1, 'kasten' => 0, 'zuletzt' => '2026-01-01 09:00:00'];
+$stand['7×8'] = ['a' => 7, 'b' => 8, 'richtig' => 1, 'falsch' => 3, 'kasten' => 0, 'zuletzt' => '2026-11-02 10:00:00'];
+$stand['6×9'] = ['a' => 6, 'b' => 9, 'richtig' => 1, 'falsch' => 1, 'kasten' => 0, 'zuletzt' => '2026-11-01 09:00:00'];
 for ($i = 0; $i < 10; $i++) {
-    $schl = array_map(fn($x) => $x['a'] . '×' . $x['b'], rechnungen_ziehen(10, EINMALEINS_KURZ, $stand, true));
+    $schl = array_map(fn($x) => rechnung_schluessel($x['a'], $x['b']), rechnungen_ziehen(10, EINMALEINS_NOETIG_MAX, $stand, true));
     pruefen(in_array('7×8', $schl, true) && in_array('6×9', $schl, true), '1×1: zu übende Rechnungen fehlen');
 }
 pruefen(rechnung_gewicht(7, 8, $stand['7×8'], true) > 5 * rechnung_gewicht(7, 7, $stand['7×7'], true), '1×1: Gewicht falsch/sitzt');
 pruefen(rechnung_gewicht(1, 8, null, false) < rechnung_gewicht(7, 8, null, false), '1×1: ×1 sollte seltener sein');
 pruefen(rechnung_stand(null) === 'neu' && rechnung_stand($stand['7×8']) === 'ueben' && rechnung_stand($stand['7×7']) === 'sitzt'
     && rechnung_stand(['richtig' => 1, 'falsch' => 0, 'kasten' => 1]) === 'unsicher', '1×1: Stand für die Farbkarte');
+pruefen(stand_von($stand, 8, 7) === $stand['7×8'], '1×1: Stand der Tauschaufgabe');
 pruefen(reihe_sitzt($stand, 2) && !reihe_sitzt($stand, 7) && !reihe_sitzt($stand, 8), '1×1: Reihe gemeistert');
+pruefen(reihe_fortschritt($stand, 7) === [9, 10] && reihe_fortschritt($stand, 2) === [10, 10] && reihe_fortschritt($stand, 2, 12) === [10, 12], '1×1: Fortschritt einer Reihe');
+
+// «Nur was nötig ist»: wrong ones first, due ones next (Leitner days), mastered and not due ones never
+$heute = '2026-11-03';  // box 5 = due after 16 days: not due yet
+[$l, $auffrischen] = rechnungen_noetig(10, $stand, $heute);
+$schl = array_map(fn($x) => rechnung_schluessel($x['a'], $x['b']), $l);
+sort($schl);
+pruefen($schl === ['6×9', '7×8'] && !$auffrischen, '1×1: nötig = nur die falschen');
+pruefen(noetig_anzahl(10, $stand, $heute) === 2 && noetig_anzahl(12, $stand, $heute) === EINMALEINS_NOETIG_MAX, '1×1: Anzahl nötig');
+$stand['3×4']['kasten'] = 1; // box 1: due after one day
+pruefen(count(rechnungen_noetig(10, $stand, '2026-11-01')[0]) === 2 && count(rechnungen_noetig(10, $stand, '2026-11-02')[0]) === 3, '1×1: fällig nach Kästchen');
+pruefen(rechnung_faellig(['kasten' => 5, 'zuletzt' => '2026-11-01 10:00:00'], '2026-11-17') && !rechnung_faellig(['kasten' => 5, 'zuletzt' => '2026-11-01 10:00:00'], '2026-11-16'), '1×1: Kästchen 5 nach 16 Tagen');
+$sitzt = array_map(fn($s) => ['kasten' => 5] + $s, $stand);
+$sitzt['7×8']['kasten'] = $sitzt['6×9']['kasten'] = $sitzt['3×4']['kasten'] = 5;
+[$l, $auffrischen] = rechnungen_noetig(10, $sitzt, $heute);
+pruefen($auffrischen && count($l) === EINMALEINS_AUFFRISCHEN && !array_filter($l, fn($x) => $x['a'] === 1 || $x['b'] === 1), '1×1: nichts fällig = auffrischen');
+$neu = rechnungen_noetig(10, [], $heute)[0];
+pruefen(count($neu) === EINMALEINS_NOETIG_MAX, '1×1: neues Profil bekommt 20');
+
+// Best values and record
+$runden = [
+    ['id' => 5, 'stufe' => '10', 'modus' => 'blitz', 'punkte' => 30, 'anzahl' => 32, 'prozent' => 93.8, 'dauer_sek' => 60],
+    ['id' => 4, 'stufe' => '10', 'modus' => 'alle', 'punkte' => 55, 'anzahl' => 55, 'prozent' => 100.0, 'dauer_sek' => 200],
+    ['id' => 3, 'stufe' => '10', 'modus' => 'blitz', 'punkte' => 31, 'anzahl' => 33, 'prozent' => 93.9, 'dauer_sek' => 60],
+    ['id' => 2, 'stufe' => '10', 'modus' => 'alle', 'punkte' => 55, 'anzahl' => 55, 'prozent' => 100.0, 'dauer_sek' => 180],
+    ['id' => 1, 'stufe' => '12', 'modus' => 'noetig', 'punkte' => 10, 'anzahl' => 20, 'prozent' => 50.0, 'dauer_sek' => 100],
+];
+$best = bestwerte($runden);
+pruefen($best[10]['blitz']['id'] === 3 && $best[10]['alle']['id'] === 2 && abs($best[10]['tempo'] - 60 / 33) < 0.01 && $best[12]['blitz'] === null, '1×1: Bestwerte');
+$neu = ['id' => 6, 'stufe' => '10', 'modus' => 'blitz', 'punkte' => 32, 'anzahl' => 34, 'prozent' => 94.1, 'dauer_sek' => 60];
+pruefen(!ist_rekord($runden[0], $runden) && !ist_rekord($runden[1], $runden) && !ist_rekord($runden[2], $runden)
+    && !ist_rekord($runden[4], $runden) && ist_rekord($neu, [$neu, ...$runden]), '1×1: Rekord (nicht beim ersten Mal, nicht bei Nötig)');
 
 // Streak: today or yesterday keeps it running; gaps end it
 pruefen(serie_aus_tagen([], '2026-11-08') === [0, 0], 'Serie: leer');
@@ -221,6 +268,34 @@ for ($i = 0; $i < 8; $i++) {
 }
 $z = $alt->query('SELECT kasten, ms_summe FROM rechnungen WHERE profil_id = 1 AND a = 7 AND b = 8')->fetch();
 pruefen((int)$z['kasten'] === KASTEN_MAX && (int)$z['ms_summe'] === 7500 + 8 * 60000, '1×1: Kästchen höchstens 5, Zeit begrenzt');
+rechnung_merken(1, 8, 7, false, 1000, $alt);
+$z = $alt->query('SELECT COUNT(*) AS n, MAX(kasten) AS k FROM rechnungen WHERE profil_id = 1')->fetch();
+pruefen((int)$z['n'] === 1 && (int)$z['k'] === 0, '1×1: 8 × 7 zählt bei 7 × 8');
+
+// Migration 4 → 5: swapped tasks merged (weaker box counts), Kurz becomes «Nur was nötig ist», daily goal column
+$v4 = new PDO('sqlite::memory:');
+$v4->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$v4->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+$v4->exec('CREATE TABLE resultate (id INTEGER PRIMARY KEY AUTOINCREMENT, zeit TEXT NOT NULL, name TEXT NOT NULL, modus TEXT NOT NULL,
+    anzahl INTEGER NOT NULL, land_richtig INTEGER NOT NULL, haupt_richtig INTEGER NOT NULL, punkte INTEGER NOT NULL,
+    max_punkte INTEGER NOT NULL, prozent REAL NOT NULL, dauer_sek INTEGER NOT NULL, details TEXT NOT NULL)');
+foreach (db_schritte() as $version => [, $schritt]) {
+    if ($version >= 2 && $version <= 4) {
+        $schritt($v4);
+    }
+}
+$v4->exec('PRAGMA user_version = 4');
+$v4->exec("INSERT INTO profile (name, email, avatar, link_hash, erstellt) VALUES ('P', 'p@example.ch', '0a1b2c3d', 'h', '2026-01-01 10:00:00')");
+$v4->exec("INSERT INTO rechnungen VALUES (1, 7, 8, 3, 1, 3, '2026-11-01 10:00:00', 3000, 4), (1, 8, 7, 2, 0, 2, '2026-11-05 10:00:00', 2000, 2), (1, 3, 3, 1, 0, 1, '2026-11-02 10:00:00', 900, 1)");
+$v4->exec("INSERT INTO resultate (zeit, name, spielart, stufe, modus, anzahl, land_richtig, haupt_richtig, punkte, max_punkte, prozent, dauer_sek, details, profil_id)
+    VALUES ('2026-11-05 10:00:00', 'P', 'einmaleins', '10', 'kurz', 20, 18, 0, 18, 20, 90, 80, '[]', 1)");
+db_migrieren($v4);
+$z = $v4->query("SELECT * FROM rechnungen WHERE a = 7 AND b = 8")->fetch();
+pruefen((int)$v4->query('SELECT COUNT(*) FROM rechnungen')->fetchColumn() === 2 && (int)$z['richtig'] === 5 && (int)$z['falsch'] === 1
+    && (int)$z['kasten'] === 2 && $z['zuletzt'] === '2026-11-05 10:00:00' && (int)$z['ms_anzahl'] === 6, 'Migration 5: Tauschaufgaben zusammengelegt');
+pruefen($v4->query('SELECT modus FROM resultate')->fetchColumn() === 'noetig', 'Migration 5: Kurz wird Nur was nötig ist');
+pruefen((int)$v4->query('SELECT tagesziel FROM profile')->fetchColumn() === TAGESZIEL_STANDARD, 'Migration 5: Tagesziel');
+
 
 pruefen((bool)preg_match('/^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/', APP_VERSION), 'APP_VERSION hat nicht die Form 1.2.3');
 

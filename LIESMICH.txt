@@ -9,8 +9,8 @@ Online-Übung mit drei Spielarten:
   (Leicht: Land aus 4 Namen wählen, Mittel: passende Flagge aus 4 wählen,
   Schwer: Land selbst schreiben).
 - 1×1: Malrechnungen bis 10, 12 oder 15 (Schieber auf der Startseite),
-  "Kurz" (20 Aufgaben, die Zeit zählt) oder "Blitz" (so viele wie möglich
-  in 60 Sekunden). Siehe Abschnitt 1×1.
+  "Nur was nötig ist" (höchstens 20), "Alle" (jede Aufgabe einmal) oder
+  "Blitz" (so viele wie möglich in 60 Sekunden). Siehe Abschnitt 1×1.
 Jede Frage wird einzeln abgefragt und sofort korrigiert.
 46 Länder (wie auf dem Arbeitsblatt), wählbar "Kurz" (15 zufällige Flaggen)
 oder "Komplett". Nach jedem Durchgang gibt es eine Auswertung, und das
@@ -91,8 +91,9 @@ profil.php       Eigenes Profil: letzte Runden, neuer Link, Abmelden
 anmelden.php     Ziel des persönlichen Links (meldet das Gerät an)
 link-vergessen.php  Neuen Link per Mail anfordern
 admin.php        Admin-Bereich: Profile, Mail-Einstellungen
-einmaleins.php   Eine 1×1-Runde (Kurz oder Blitz)
-statistik.php    1×1-Statistik eines Profils: Tafel, Abzeichen, Serie, Verlauf
+einmaleins.php   Eine 1×1-Runde (Nur was nötig ist, Alle oder Blitz)
+statistik.php    1×1-Statistik: Tagesziel, Tafel, Reihen, Bestwerte, Abzeichen,
+                 Serie, Verlauf
 inc/             Profile, Mailversand, Icons, Einstellungen, 1×1 (geschützt)
 version.php      Versionsnummer (wird in der Fusszeile angezeigt)
 lib.php          Länderdaten, Antwortprüfung, Datenbank
@@ -150,7 +151,8 @@ RANGLISTE
 Kurz und Komplett haben je eine eigene Rangliste. Sortiert wird nach
 Prozent, bei Gleichstand gewinnt die schnellere Zeit. Die Startseite zeigt
 die Top 5 jedes Modus.
-1×1: eigene Ranglisten je Bereich (bis 10, 12, 15) und für Kurz und Blitz.
+1×1: eigene Ranglisten je Bereich (bis 10, 12, 15) für Alle und Blitz.
+"Nur was nötig ist" hat keine Rangliste (jedes Kind bekommt andere Aufgaben).
 Blitz ist nach Anzahl richtig sortiert, bei Gleichstand zählt die Quote.
 
 Die Ergebnisse sind ohne Passwort für alle sichtbar, die den Link kennen.
@@ -191,7 +193,10 @@ Solange das Update nicht gemacht ist, führt jede Seite zur Update-Seite.
 Bei einer neuen Installation ist kein Update nötig.
 
 Was die Updates ändern: Version 2 ergänzt "spielart" und "stufe",
-Version 3 die Tabellen für Profile und Geräte und die Spalte "profil_id".
+Version 3 die Tabellen für Profile und Geräte und die Spalte "profil_id",
+Version 4 den Lernstand fürs 1×1 (Tabelle "rechnungen"), Version 5 legt
+Tauschaufgaben zusammen, macht aus "Kurz" beim 1×1 "Nur was nötig ist"
+und ergänzt das Tagesziel.
 Die Versionsnummer steht in der Datenbank (PRAGMA user_version).
 
 
@@ -199,15 +204,29 @@ Die Versionsnummer steht in der Datenbank (PRAGMA user_version).
 ---
 - Eine Aufgabe nach der anderen, Antwort eintippen, Enter. Gleich danach
   steht, ob es richtig war (bei falsch mit der Lösung).
+- Drei Arten:
+  "Nur was nötig ist": höchstens 20 Aufgaben – zuerst die falschen, dann
+    die wieder fälligen, dann neue. Ist nichts fällig, 10 zum Auffrischen.
+    Gäste bekommen 20 gemischte Aufgaben.
+  "Alle": jede Aufgabe genau einmal (bis 10: 55, bis 12: 78, bis 15: 120).
+  "Blitz": so viele wie möglich in 60 Sekunden.
+- 7 × 8 und 8 × 7 sind dieselbe Aufgabe; gefragt wird in beiden Richtungen.
 - Eine falsche Rechnung kommt drei Aufgaben später nochmals (höchstens
-  zweimal). Bei "Kurz" zählen diese Wiederholungen nicht fürs Ergebnis.
-- Mit Profil merkt sich BrainForge jede Rechnung: Was falsch war, kommt in
-  den nächsten Runden sicher wieder und öfter, was sitzt, seltener.
+  zweimal). Bei "Alle" und "Nur was nötig ist" zählen diese Wiederholungen
+  nicht fürs Ergebnis.
+- Mit Profil merkt sich BrainForge jede Aufgabe in einem Kästchen 0 bis 5
+  (Lernkartei, für die Kinder unsichtbar): richtig = ein Kästchen höher,
+  falsch = zurück auf 0. Wieder fällig ist eine Aufgabe nach 0, 1, 2, 4, 8
+  oder 16 Tagen, je nach Kästchen. Ab Kästchen 3 "sitzt" sie.
   Eine Gast-Runde, die mit "Profil erstellen" übernommen wird, zählt mit.
-- Statistik (Profil > "Meine 1×1-Statistik"): die 1×1-Tafel als Farbkarte
-  (sitzt / unsicher / noch üben / noch nie gerechnet), Abzeichen, die Serie
-  (Tage am Stück mit mindestens einer Runde, auch oben beim Profil-Knopf)
-  und der Verlauf der letzten Runden.
+- Tagesziel: Anzahl Aufgaben pro Tag (20, 30, 50, 100 oder keines),
+  einstellbar auf der Profilseite. Fortschritt auf der Startseite und nach
+  jeder Runde.
+- Statistik (Profil > "Meine 1×1-Statistik"): Tagesziel mit den letzten
+  7 Tagen, die 1×1-Tafel als Farbkarte (sitzt / unsicher / noch üben / noch
+  nie gerechnet), Fortschritt jeder Reihe, Bestwerte (Blitz, Alle, Tempo),
+  Abzeichen, die Serie (Tage am Stück mit mindestens einer Runde, auch oben
+  beim Profil-Knopf) und der Verlauf der letzten Runden.
 
 
 UMRISSE

@@ -18,6 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         geraet_abmelden();
         header('Location: index.php');
         exit;
+    } elseif ($aktion === 'tagesziel') {
+        $ziel = (int)($_POST['tagesziel'] ?? TAGESZIEL_STANDARD);
+        if (in_array($ziel, TAGESZIELE, true)) {
+            db()->prepare('UPDATE profile SET tagesziel = ? WHERE id = ?')->execute([$ziel, $p['id']]);
+        }
+        header('Location: profil.php#tagesziel');
+        exit;
     } elseif ($aktion === 'wuerfeln') {
         db()->prepare('UPDATE profile SET avatar = ? WHERE id = ?')->execute([avatar_neu(), $p['id']]);
         header('Location: profil.php');
@@ -104,6 +111,18 @@ kopf(t('Mein Profil'));
   <?php endif; ?>
 
   <h2><?= h(t('Einstellungen')) ?></h2>
+  <form method="post" class="profil-aktion" id="tagesziel">
+    <?= csrf_feld() ?><input type="hidden" name="aktion" value="tagesziel">
+    <label for="ziel-wahl"><?= h(t('Tagesziel beim 1×1')) ?></label>
+    <span class="ziel-wahl">
+      <select id="ziel-wahl" name="tagesziel">
+        <?php foreach (TAGESZIELE as $z): ?>
+          <option value="<?= $z ?>" <?= tagesziel($p) === $z ? 'selected' : '' ?>><?= h($z === 0 ? t('kein Ziel') : t('{n} Aufgaben pro Tag', ['n' => $z])) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <button type="submit" class="sekundaer"><?= h(t('Speichern')) ?></button>
+    </span>
+  </form>
   <form method="post" class="profil-aktion">
     <?= csrf_feld() ?><input type="hidden" name="aktion" value="wuerfeln">
     <span><?= h(t('Gefällt dir dein Icon nicht mehr?')) ?></span>

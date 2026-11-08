@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (($eingabe['spielart'] ?? '') === 'einmaleins') {
         // eigene Feldnamen, weil die Formulargruppen der Länder gleichzeitig im Formular stehen
         $eingabe['stufe'] = EINMALEINS_BIS[(int)($eingabe['bereich'] ?? 0)] ?? EINMALEINS_BIS[0];
-        $eingabe['modus'] = $eingabe['tempo'] ?? 'kurz';
+        $eingabe['modus'] = $eingabe['tempo'] ?? 'noetig';
     }
     [$spielart, $stufe, $modus] = kombi_aus($eingabe);
 
@@ -31,13 +31,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bis = (int)$stufe;
         $mitProfil = $profil !== null;
         $stand = $mitProfil ? lernstand((int)$profil['id']) : [];
+        $auffrischen = false;
+        if ($modus === 'alle') {
+            $aufgaben = rechnungen_alle($bis);
+        } elseif ($modus === 'blitz') {
+            $aufgaben = rechnungen_ziehen($bis, 40, $stand, $mitProfil);
+        } elseif ($mitProfil) {
+            [$aufgaben, $auffrischen] = rechnungen_noetig($bis, $stand);
+        } else {
+            // Gäste: ohne Lernstand 20 gemischte Aufgaben
+            $aufgaben = rechnungen_ziehen($bis, EINMALEINS_NOETIG_MAX, [], false);
+        }
         $_SESSION['rechnen'] = [
             'token'     => bin2hex(random_bytes(16)),
             'name'      => $name,
             'profil_id' => $mitProfil ? (int)$profil['id'] : null,
             'bis'       => $bis,
             'modus'     => $modus,
-            'aufgaben'  => rechnungen_ziehen($bis, $modus === 'blitz' ? 40 : EINMALEINS_KURZ, $stand, $mitProfil),
+            'aufgaben'  => $aufgaben,
+            'gesamt'    => count($aufgaben),
+            'auffrischen' => $auffrischen,
             'antworten' => [],
             'wiederholt' => [],
             'letzte'    => null,
@@ -96,9 +109,20 @@ if ($bl !== 'flaggen' && !isset(STUFEN[$bl]) && !in_array($bl, $einmaleinsListen
 }
 $blSpielart = $bl === 'flaggen' ? 'flaggen' : (isset(STUFEN[$bl]) ? 'umrisse' : 'einmaleins');
 $blStufe = $bl === 'flaggen' ? '' : ($blSpielart === 'umrisse' ? $bl : substr($bl, 1));
-$blModi = $blSpielart === 'einmaleins' ? ['kurz', 'blitz'] : ['kurz', 'komplett'];
+$blModi = $blSpielart === 'einmaleins' ? ['alle', 'blitz'] : ['kurz', 'komplett'];
 $bereich = $spielart === 'einmaleins' ? (int)array_search((int)$stufe, EINMALEINS_BIS, true) : 0;
-$tempo = $spielart === 'einmaleins' ? $modus : 'kurz';
+$tempo = $spielart === 'einmaleins' ? $modus : 'noetig';
+// Mit Profil: wie viele Aufgaben heute nötig sind (je Bereich) und das Tagesziel
+$ich = profil();
+$noetig = [];
+$ziel = null;
+if ($ich !== null) {
+    $meinStand = lernstand((int)$ich['id']);
+    foreach (EINMALEINS_BIS as $n) {
+        $noetig[$n] = noetig_anzahl($n, $meinStand);
+    }
+    $ziel = tagesziel_stand($ich);
+}
 if ($spielart === 'einmaleins') {
     $modus = 'kurz'; // Umfang der Länder-Quiz
 }
@@ -114,7 +138,7 @@ kopf(APP_NAME);
 
 <form method="post" class="karte start" id="startform">
   <?php if ($fehler): ?><p class="meldung"><?= h($fehler) ?></p><?php endif; ?>
-  <?php if ($ich = profil()): ?>
+  <?php if ($ich !== null): ?>
   <p class="spielt-als"><?= avatar_svg($ich['avatar'], 36) ?> <span><?= h(t('Du spielst als')) ?> <strong><?= h($ich['name']) ?></strong></span></p>
   <?php else: ?>
   <label for="name"><?= h(t('Dein Name')) ?> <span class="leise">· <?= h(t('als Gast')) ?></span></label>
@@ -154,16 +178,42 @@ kopf(APP_NAME);
       <div class="bereich-marken" aria-hidden="true"><?php foreach (EINMALEINS_BIS as $n): ?><span><?= $n ?>×</span><?php endforeach; ?></div>
       <small class="leise"><?= h(t('Bis 10 ist das kleine 1×1, bis 12 oder 15 wird es knifflig.')) ?></small>
     </div>
-    <div class="wahl-zwei">
+    <?php
+    // Texte je Bereich; das Skript unten tauscht sie beim Schieben aus
+    $texteAlle = $texteNoetig = [];
+    foreach (EINMALEINS_BIS as $n) {
+        $texteAlle[] = t('alle {n} Aufgaben einmal, die Zeit zählt', ['n' => paare_anzahl($n)]);
+        if ($ich === null) {
+            $texteNoetig[] = t('{n} gemischte Aufgaben (mit Profil: genau das, was du noch übst)', ['n' => EINMALEINS_NOETIG_MAX]);
+        } elseif ($noetig[$n] === 0) {
+            $texteNoetig[] = t('heute ist nichts fällig – {n} zum Auffrischen', ['n' => EINMALEINS_AUFFRISCHEN]);
+        } else {
+            $texteNoetig[] = t('heute {n} Aufgaben, die du noch übst', ['n' => $noetig[$n]]);
+        }
+    }
+    ?>
+    <div class="wahl-modi">
       <label class="wahl">
-        <input type="radio" name="tempo" value="kurz" <?= $tempo === 'kurz' ? 'checked' : '' ?>>
-        <span><strong><?= h(t('Kurz')) ?></strong> · <?= h(t('{n} Aufgaben, die Zeit zählt', ['n' => EINMALEINS_KURZ])) ?></span>
+        <input type="radio" name="tempo" value="noetig" <?= $tempo === 'noetig' ? 'checked' : '' ?>>
+        <span><strong><?= h(t('Nur was nötig ist')) ?></strong> · <span class="modus-text" data-texte="<?= h(json_encode($texteNoetig, JSON_UNESCAPED_UNICODE)) ?>"><?= h($texteNoetig[$bereich]) ?></span></span>
+      </label>
+      <label class="wahl">
+        <input type="radio" name="tempo" value="alle" <?= $tempo === 'alle' ? 'checked' : '' ?>>
+        <span><strong><?= h(t('Alle')) ?></strong> · <span class="modus-text" data-texte="<?= h(json_encode($texteAlle, JSON_UNESCAPED_UNICODE)) ?>"><?= h($texteAlle[$bereich]) ?></span></span>
       </label>
       <label class="wahl">
         <input type="radio" name="tempo" value="blitz" <?= $tempo === 'blitz' ? 'checked' : '' ?>>
         <span><strong><?= h(t('Blitz')) ?></strong> · <?= h(t('so viele wie möglich in {n} Sekunden', ['n' => BLITZ_SEKUNDEN])) ?></span>
       </label>
     </div>
+    <?php if ($ziel !== null): [$heute, $soll] = $ziel; ?>
+      <div class="tagesziel<?= $heute >= $soll ? ' erreicht' : '' ?>">
+        <span><?= $heute >= $soll ? '🎯 ' . h(t('Tagesziel erreicht!')) : h(t('Tagesziel')) ?></span>
+        <span class="ziel-balken" role="progressbar" aria-valuemin="0" aria-valuemax="<?= $soll ?>" aria-valuenow="<?= min($heute, $soll) ?>"
+              aria-label="<?= h(t('Tagesziel')) ?>"><span style="width: <?= round(min(1, $heute / $soll) * 100) ?>%"></span></span>
+        <span class="ziel-zahl"><?= h(t('{n} von {ziel} Aufgaben', ['n' => $heute, 'ziel' => $soll])) ?></span>
+      </div>
+    <?php endif; ?>
   </fieldset>
 
   <fieldset id="stufen">
@@ -218,6 +268,7 @@ kopf(APP_NAME);
     document.getElementById('umfang').hidden = art === 'einmaleins';
     document.getElementById('einmaleins-wahl').hidden = art !== 'einmaleins';
     wert.textContent = texte[bereich.value];
+    form.querySelectorAll('.modus-text').forEach(function (el) { el.textContent = JSON.parse(el.getAttribute('data-texte'))[bereich.value]; });
   }
   form.addEventListener('change', zeigen);
   bereich.addEventListener('input', zeigen);
