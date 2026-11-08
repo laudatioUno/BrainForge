@@ -89,6 +89,8 @@ kopf(t('Mein Profil'));
     <div><dt><?= h(t('Angemeldete Geräte')) ?></dt><dd><?= $geraete ?></dd></div>
   </dl>
 
+  <p><a class="knopf" href="statistik.php"><?= h(t('Meine 1×1-Statistik')) ?></a></p>
+
   <?php if ($letzte): ?>
     <h2><?= h(t('Letzte Runden')) ?></h2>
     <ul class="runden-liste">

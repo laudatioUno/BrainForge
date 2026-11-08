@@ -3,11 +3,14 @@ BRAINFORGE (früher CountryQuiz / Flaggenquiz Europa)
 Die aktuelle Version steht unten auf jeder Seite (Datei version.php).
 Neue Versionen: https://github.com/laudatioUno/BrainForge/releases
 
-Online-Übung mit zwei Spielarten:
+Online-Übung mit drei Spielarten:
 - Flaggen: Flagge erkennen, Land und Hauptstadt eintippen.
 - Umrisse: Land an seinem Umriss erkennen, in drei Stufen
   (Leicht: Land aus 4 Namen wählen, Mittel: passende Flagge aus 4 wählen,
   Schwer: Land selbst schreiben).
+- 1×1: Malrechnungen bis 10, 12 oder 15 (Schieber auf der Startseite),
+  "Kurz" (20 Aufgaben, die Zeit zählt) oder "Blitz" (so viele wie möglich
+  in 60 Sekunden). Siehe Abschnitt 1×1.
 Jede Frage wird einzeln abgefragt und sofort korrigiert.
 46 Länder (wie auf dem Arbeitsblatt), wählbar "Kurz" (15 zufällige Flaggen)
 oder "Komplett". Nach jedem Durchgang gibt es eine Auswertung, und das
@@ -88,7 +91,9 @@ profil.php       Eigenes Profil: letzte Runden, neuer Link, Abmelden
 anmelden.php     Ziel des persönlichen Links (meldet das Gerät an)
 link-vergessen.php  Neuen Link per Mail anfordern
 admin.php        Admin-Bereich: Profile, Mail-Einstellungen
-inc/             Profile, Mailversand, Icons, Einstellungen (geschützt)
+einmaleins.php   Eine 1×1-Runde (Kurz oder Blitz)
+statistik.php    1×1-Statistik eines Profils: Tafel, Abzeichen, Serie, Verlauf
+inc/             Profile, Mailversand, Icons, Einstellungen, 1×1 (geschützt)
 version.php      Versionsnummer (wird in der Fusszeile angezeigt)
 lib.php          Länderdaten, Antwortprüfung, Datenbank
 config.php       Einstellungen
@@ -145,6 +150,8 @@ RANGLISTE
 Kurz und Komplett haben je eine eigene Rangliste. Sortiert wird nach
 Prozent, bei Gleichstand gewinnt die schnellere Zeit. Die Startseite zeigt
 die Top 5 jedes Modus.
+1×1: eigene Ranglisten je Bereich (bis 10, 12, 15) und für Kurz und Blitz.
+Blitz ist nach Anzahl richtig sortiert, bei Gleichstand zählt die Quote.
 
 Die Ergebnisse sind ohne Passwort für alle sichtbar, die den Link kennen.
 Einzelne Einträge löschen: data/resultate.sqlite mit einem SQLite-Programm
@@ -186,6 +193,21 @@ Bei einer neuen Installation ist kein Update nötig.
 Was die Updates ändern: Version 2 ergänzt "spielart" und "stufe",
 Version 3 die Tabellen für Profile und Geräte und die Spalte "profil_id".
 Die Versionsnummer steht in der Datenbank (PRAGMA user_version).
+
+
+1×1
+---
+- Eine Aufgabe nach der anderen, Antwort eintippen, Enter. Gleich danach
+  steht, ob es richtig war (bei falsch mit der Lösung).
+- Eine falsche Rechnung kommt drei Aufgaben später nochmals (höchstens
+  zweimal). Bei "Kurz" zählen diese Wiederholungen nicht fürs Ergebnis.
+- Mit Profil merkt sich BrainForge jede Rechnung: Was falsch war, kommt in
+  den nächsten Runden sicher wieder und öfter, was sitzt, seltener.
+  Eine Gast-Runde, die mit "Profil erstellen" übernommen wird, zählt mit.
+- Statistik (Profil > "Meine 1×1-Statistik"): die 1×1-Tafel als Farbkarte
+  (sitzt / unsicher / noch üben / noch nie gerechnet), Abzeichen, die Serie
+  (Tage am Stück mit mindestens einer Runde, auch oben beim Profil-Knopf)
+  und der Verlauf der letzten Runden.
 
 
 UMRISSE

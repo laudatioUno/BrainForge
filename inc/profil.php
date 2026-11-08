@@ -156,6 +156,12 @@ function profil_nach_anmeldung(int $profilId): void
     $p->execute([$profilId]);
     $name = (string)$p->fetchColumn();
     $platz = implode(',', array_fill(0, count($meine), '?'));
+    // 1×1-Runden: die Antworten fliessen auch in den Lernstand des Profils
+    $st = db()->prepare("SELECT details FROM resultate WHERE profil_id IS NULL AND spielart = 'einmaleins' AND id IN ($platz) ORDER BY id");
+    $st->execute($meine);
+    foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $details) {
+        rechnungen_aus_details($profilId, json_decode((string)$details, true) ?: []);
+    }
     db()->prepare("UPDATE resultate SET profil_id = ?, name = ? WHERE profil_id IS NULL AND id IN ($platz)")
         ->execute(array_merge([$profilId, $name], $meine));
 }

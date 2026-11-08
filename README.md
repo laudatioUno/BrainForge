@@ -1,6 +1,6 @@
 # BrainForge
 
-Learning games for school, made to run on any web host: the 46 countries of Europe with their flags, outlines and capitals (and, from version 2.0, the multiplication tables).
+Learning games for school, made to run on any web host: the 46 countries of Europe with their flags, outlines and capitals and the multiplication tables.
 Made for exam preparation at school (7th grade): pupils practise on their phone or computer, one question at a time, with immediate feedback and the correction. The quiz is available in **German and French**; pupils switch the language on the start page or in the footer.
 
 ## Features
@@ -14,6 +14,9 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 - Answer options from neighbouring countries or similar flags, shuffled anew every time
 - Tolerant answer checking: umlauts, case and small typos don't matter, words that sound the same count (Lichtenstein, Warshau), the correct spelling is always shown
 - *Kurz* (15 random countries) or *Komplett* (all 46)
+- **Multiplication tables** (*1×1*): up to 10, 12 or 15 (slider), *Kurz* (20 tasks, time counts) or *Blitz* (as many as possible in 60 seconds)
+  - A wrong task comes back three tasks later; with a profile, every task's learning state is kept, so wrong and unsure ones come more often in the next rounds and mastered ones less
+  - Statistics per profile: the table as a colour map (mastered / unsure / to practise / new), badges, streak (days in a row, also next to the profile button) and history of the last rounds
 - Results stored in SQLite; evaluation at the end with the place in the ranking
 - Public rankings per game type, level and length, top 5 on the start page, CSV export
 - German and French, including country and capital names and the answer checking; the choice is remembered, the browser language decides on the first visit

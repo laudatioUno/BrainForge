@@ -3,6 +3,24 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [1.5.0] – 2026-11
+
+### Added
+- **1×1** as a third game: multiplication up to 10, 12 or 15 (slider on the start page).
+  - *Kurz*: 20 tasks, ranked by percentage, then time. *Blitz*: as many as possible in 60 seconds with a countdown, ranked by the number of right answers, then the rate.
+  - Type the answer and press Enter; the next task comes at once with the feedback for the last one (with the solution when wrong).
+  - A wrong task comes back three tasks later («Nochmals», at most twice). In *Kurz* repeats don't count for the result.
+  - With a profile, every task has a learning state (box 0–5: right = one up, wrong = back to 0). The next rounds draw wrong and unsure tasks more often and mastered ones less; tasks answered wrong last time always come again. ×1 and ×10 come less often. A guest round taken over into a new profile counts for the learning state.
+  - Own rankings per range and mode; on the start page and under *Ergebnisse* (with CSV export).
+- **1×1 statistics** per profile (*Meine 1×1-Statistik*, from the profile page and the result page): the table as a colour map (mastered / unsure / to practise / never done), 17 badges (first round, 10 and 50 rounds, no mistakes, Blitz 25 and 40, streaks of 3 and 7 days, the 2 to 9 times tables, all of the small table), the current and longest streak, and the history of the last 10 rounds with rate and time per task.
+- Streak 🔥 (days in a row with at least one round, any game) next to the profile button from 2 days.
+
+### Changed
+- Start page: title «Üben mit BrainForge», three games to choose from; the options of the chosen game are shown.
+
+### Database
+- Version 4: table `rechnungen` (learning state per profile and task). Existing installations are updated via `update.php` with a backup, as before.
+
 ## [1.4.0] – 2026-11
 
 ### Added
