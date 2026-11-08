@@ -13,3 +13,11 @@ Options -Indexes
 </FilesMatch>
 
 DirectoryIndex index.php
+
+# Kurze Adresse für den Admin-Bereich: /admin (oder /admin/) leitet auf admin.php weiter
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # %1 = Pfad bis zum Programmordner, so klappt es auch in einem Unterordner (z. B. /quiz/admin)
+    RewriteCond %{REQUEST_URI} ^(.*/)admin/?$
+    RewriteRule ^admin/?$ %1admin.php [R=302,L]
+</IfModule>

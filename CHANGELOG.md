@@ -11,7 +11,7 @@ The section of a version is used as the release notes on GitHub.
 - After a guest round: **Profil erstellen und Runde übernehmen** – the new profile takes over the round just played.
 - *Link vergessen?*: enter the e-mail address and get a new link for every profile with that address. The old link stops working and all devices are logged out. The answer never reveals whether an address exists.
 - Profile page: last rounds, number of logged-in devices, new icon, new link (keeps this device, logs out the others), log out.
-- **Admin area** (`admin.php`, password `ADMIN_PASSWORT` in `config.php`; locked as long as it is `bitte-aendern`): all profiles with e-mail, created, last login, rounds and devices; send a new link, rename, delete (with its rounds).
+- **Admin area** (`admin.php`, also reachable as `/admin` via `.htaccess`, password `ADMIN_PASSWORT` in `config.php`; locked as long as it is `bitte-aendern`): all profiles with e-mail, created, last login, rounds and devices; send a new link, rename, delete (with its rounds).
 - **Mail settings in the admin area**: SMTP (STARTTLS, SSL or none, with login) or PHP `mail()`, sender, address of the site for the links, test mail. Stored in `data/einstellungen.php`, not in the code, so an update does not overwrite them.
 
 ### Security

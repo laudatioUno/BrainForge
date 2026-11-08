@@ -60,7 +60,8 @@ ADMIN-BEREICH UND MAILVERSAND
 -----------------------------
 1. In config.php ein eigenes ADMIN_PASSWORT eintragen. Solange dort
    'bitte-aendern' steht, ist der Admin-Bereich gesperrt.
-2. https://deine-domain.ch/admin.php aufrufen und anmelden.
+2. https://deine-domain.ch/admin aufrufen (leitet auf admin.php weiter)
+   und anmelden.
 3. Unter "Mail-Einstellungen" die Angaben des Webhosters eintragen
    (SMTP-Server, Port, Verschlüsselung, Benutzer, Passwort, Absender) und
    "Speichern und Testmail senden" klicken.

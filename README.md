@@ -41,7 +41,7 @@ Settings (number of countries in *Kurz*, tolerant checking on/off, default langu
 ### Profiles and e-mail
 
 1. Set your own `ADMIN_PASSWORT` in `config.php`. As long as it is `bitte-aendern`, the admin area stays locked.
-2. Open `admin.php`, log in and fill in the **Mail-Einstellungen** (your host's SMTP server, port, encryption, user, password, sender address). *Speichern und Testmail senden* checks them right away.
+2. Open `admin` (redirects to `admin.php`; needs `mod_rewrite`, otherwise use `admin.php` directly), log in and fill in the **Mail-Einstellungen** (your host's SMTP server, port, encryption, user, password, sender address). *Speichern und Testmail senden* checks them right away.
    They are stored in `data/einstellungen.php` (protected like the database).
 3. If the site runs behind a proxy or under several addresses, enter the *Adresse der Seite*; the links in the mails use it.
 
