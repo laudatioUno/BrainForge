@@ -35,9 +35,9 @@ jobs:
           bin/build-release.sh "$VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       # archive: false uploads the release ZIP itself, so the download is directly
-      # countryquiz-<version>-pr<n>.zip and not a ZIP inside another ZIP.
+      # brainforge-<version>-pr<n>.zip and not a ZIP inside another ZIP.
       - uses: actions/upload-artifact@v7.0.1
         with:
-          path: build/countryquiz-${{ steps.build.outputs.version }}.zip
+          path: build/brainforge-${{ steps.build.outputs.version }}.zip
           archive: false
           retention-days: 14

@@ -55,11 +55,10 @@ $blStufe = $bl === 'flaggen' ? '' : $bl;
 
 $alle = count(LAENDER);
 $stufeGewaehlt = $stufe ?: 'mittel';
-kopf(t('Flaggenquiz Europa'));
+kopf(APP_NAME);
 ?>
-<div class="oben-rechts"><?= umschalter() ?></div>
 <header class="hero">
-  <h1><?= h(t('Flaggenquiz Europa')) ?></h1>
+  <h1><?= h(t('Länder Europas')) ?></h1>
   <p><?= h(t('Flaggen und Umrisse erkennen – Länder und Hauptstädte üben.')) ?></p>
 </header>
 

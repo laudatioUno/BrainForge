@@ -76,7 +76,7 @@ function zelle(string $eingabe, string $status, string $loesung): string
     return $html . '</td>';
 }
 
-kopf(t('Auswertung') . ' · ' . t('Flaggenquiz Europa'));
+kopf(t('Auswertung'));
 ?>
 <header class="leiste">
   <h1><?= h(t('Auswertung')) ?> <span class="kombi-chip"><?= h($kombi) ?></span></h1>

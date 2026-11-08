@@ -3,15 +3,15 @@
 #
 #   bin/build-release.sh [version]
 #
-# Result: build/countryquiz-<version>.zip (contains the folder countryquiz/)
+# Result: build/brainforge-<version>.zip (contains the folder brainforge/)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:-$(php -r 'require "'"$ROOT"'/version.php"; echo APP_VERSION;')}"
 BUILD="$ROOT/build"
-STAGE="$BUILD/countryquiz"
+STAGE="$BUILD/brainforge"
 
-rm -rf "$STAGE" "$BUILD/countryquiz-$VERSION.zip"
+rm -rf "$STAGE" "$BUILD/brainforge-$VERSION.zip"
 mkdir -p "$STAGE"
 
 # Copy tracked files only (no local database, no dev files).
@@ -24,6 +24,6 @@ git ls-files -z \
 mkdir -p "$STAGE/data"
 
 cd "$BUILD"
-zip -qr "countryquiz-$VERSION.zip" countryquiz
+zip -qr "brainforge-$VERSION.zip" brainforge
 rm -rf "$STAGE"
-echo "Built $BUILD/countryquiz-$VERSION.zip"
+echo "Built $BUILD/brainforge-$VERSION.zip"

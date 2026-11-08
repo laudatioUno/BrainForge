@@ -108,7 +108,7 @@ jobs:
           awk -v v="[${{ steps.v.outputs.version }}]" '/^## \[/ { p = index($0, v) > 0; next } p' CHANGELOG.md > build/notes.md || true
           if [ -s build/notes.md ]; then NOTES=(--notes-file build/notes.md); else NOTES=(--generate-notes); fi
           gh release create "${{ steps.v.outputs.tag }}" \
-            "build/countryquiz-${{ steps.v.outputs.version }}.zip" \
+            "build/brainforge-${{ steps.v.outputs.version }}.zip" \
             --target "$GITHUB_SHA" \
-            --title "CountryQuiz ${{ steps.v.outputs.tag }}" \
+            --title "BrainForge ${{ steps.v.outputs.tag }}" \
             "${NOTES[@]}" $PRERELEASE

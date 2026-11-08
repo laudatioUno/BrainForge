@@ -334,7 +334,6 @@ button.option:hover { border-color: var(--akzent); background: var(--akzent-hell
 .app-footer a:hover { color: var(--text); text-decoration: underline; }
 
 /* ---- Sprachwahl ---- */
-.oben-rechts { display: flex; justify-content: flex-end; }
 .sprachwahl { display: inline-flex; gap: 4px; padding: 3px; border-radius: 99px; background: var(--karte); border: 1px solid var(--linie); font-size: .85rem; }
 .sprachwahl a, .sprachwahl span { padding: 4px 12px; border-radius: 99px; text-decoration: none; color: var(--text); }
 .sprachwahl span[aria-current] { background: var(--akzent); color: var(--auf-akzent); font-weight: 600; }
@@ -343,7 +342,6 @@ button.option:hover { border-color: var(--akzent); background: var(--akzent-hell
 
 /* ---- Darstellung: Umschalter Auto / Hell / Dunkel ---- */
 .umschalter-leiste { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.oben-rechts .umschalter-leiste { justify-content: flex-end; }
 .themawahl { display: inline-flex; gap: 4px; padding: 3px; border-radius: 99px; background: var(--karte); border: 1px solid var(--linie); font-size: .85rem; }
 .themawahl > a, .themawahl > span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; text-decoration: none; color: var(--text); }
 .themawahl > span[aria-current] { background: var(--akzent); color: var(--auf-akzent); font-weight: 600; }
@@ -415,3 +413,14 @@ button.option:hover { border-color: var(--akzent); background: var(--akzent-hell
   .themawahl .thema-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .themawahl > a, .themawahl > span { padding: 5px 9px; }
 }
+
+/* ---- Kopfzeile mit Logo ---- */
+.app-kopf {
+  max-width: 1100px; margin: 0 auto; padding: 14px 16px 0;
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+}
+.app-marke { display: flex; gap: 10px; align-items: center; color: var(--text); text-decoration: none; font-weight: 800; font-size: 1.25rem; letter-spacing: -.01em; }
+.app-marke img { display: block; border-radius: 8px; }
+.kopf-rechts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.kopf-rechts .umschalter-leiste { justify-content: flex-end; }
+main { padding-top: 12px; }

@@ -83,10 +83,10 @@ function rueckmeldung(string $titel, string $eingabe, string $status, string $lo
     return $html . '</div>';
 }
 
-kopf(t('Flaggenquiz Europa'));
+kopf($umrisse ? t('Umrisse') : t('Flaggen'));
 ?>
 <header class="leiste">
-  <h1><?= h(t('Flaggenquiz')) ?></h1>
+  <h1><?= h($umrisse ? t('Umrisse') : t('Flaggen')) ?></h1>
   <span><?= h($q['name']) ?> · <?= h(kombi_name($spielart, $stufe, $q['modus'])) ?></span>
 </header>
 

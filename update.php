@@ -32,7 +32,7 @@ if (update_noetig()) {
     $anzahl = (int)db()->query('SELECT COUNT(*) FROM resultate')->fetchColumn();
 }
 
-kopf(t('Update') . ' · ' . t('Flaggenquiz Europa'));
+kopf(t('Update'));
 ?>
 <section class="karte start update">
 <?php if ($sicherung !== null): ?>

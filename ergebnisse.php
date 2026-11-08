@@ -25,7 +25,7 @@ function link_zu(array $aenderung): string
 
 // ---- CSV-Export ----
 if (isset($_GET['csv'])) {
-    $datei = 'flaggenquiz_' . $spielart . ($stufe ? '-' . $stufe : '') . '_' . $modus . '_' . date('Y-m-d') . '.csv';
+    $datei = 'brainforge_' . $spielart . ($stufe ? '-' . $stufe : '') . '_' . $modus . '_' . date('Y-m-d') . '.csv';
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $datei . '"');
     $out = fopen('php://output', 'w');
@@ -54,7 +54,7 @@ foreach (db()->query('SELECT spielart, stufe, modus, COUNT(*) AS n FROM resultat
     }
 }
 
-kopf(t('Ergebnisse') . ' · ' . t('Flaggenquiz Europa'));
+kopf(t('Ergebnisse'));
 ?>
 <header class="leiste">
   <h1><?= h(t('Ergebnisse')) ?></h1>

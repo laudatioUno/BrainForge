@@ -1,6 +1,6 @@
 <?php
 // ------------------------------------------------------------
-// Einstellungen Flaggenquiz Europa
+// Einstellungen BrainForge
 // ------------------------------------------------------------
 
 // Anzahl Flaggen im Modus "Kurz"

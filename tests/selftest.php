@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 const UPDATE_SEITE = true;           // no redirect to the update page
 $_SERVER['REQUEST_METHOD'] = 'GET';
-$tmp = sys_get_temp_dir() . '/countryquiz-selftest-' . getmypid();
+$tmp = sys_get_temp_dir() . '/brainforge-selftest-' . getmypid();
 @mkdir($tmp);
 session_save_path($tmp);
 require __DIR__ . '/../lib.php';
