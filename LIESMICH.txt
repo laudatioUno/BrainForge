@@ -54,7 +54,7 @@ lib.php          Länderdaten, Antwortprüfung, Datenbank
 config.php       Einstellungen
 style.css        Gestaltung
 flags/           Flaggen (SVG, neutrale Dateinamen)
-icons/           App-Symbol, Favicon, Manifest für den Home-Bildschirm
+appicon/         App-Symbol, Favicon, Manifest für den Home-Bildschirm
 umrisse/         Länderumrisse bzw. Kartenausschnitte (SVG, neutrale Dateinamen)
 
 
