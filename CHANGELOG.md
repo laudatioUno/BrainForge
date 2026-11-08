@@ -28,7 +28,7 @@ The section of a version is used as the release notes on GitHub.
 - Header on every page with the BrainForge logo (link to the start page) and the language and theme switches; the footer only shows the version.
 
 ### Added
-- App icon: favicon (SVG and PNG), icon for the home screen on iPhone and Android, web app manifest. Added to the home screen, BrainForge opens in the normal browser, so a login stays valid (preparation for profiles).
+- App icon: favicon (SVG and PNG), icon for the home screen on iPhone and Android, web app manifest. The files are in `appicon/`, not `icons/`: many Apache servers reserve `/icons/` for their own symbols, so files there are not found. Added to the home screen, BrainForge opens in the normal browser, so a login stays valid (preparation for profiles).
 
 ## [1.2.0] – 2026-10
 
