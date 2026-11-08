@@ -1,7 +1,16 @@
 # Changelog
 
-All notable changes to CountryQuiz. Versions follow [semantic versioning](https://semver.org/).
+All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
+
+## [1.3.0] – 2026-11
+
+### Changed
+- New name: **BrainForge** (formerly CountryQuiz). The page title, header, footer, release ZIP (`brainforge-<version>.zip`) and documentation use the new name.
+- Header on every page with the BrainForge logo (link to the start page) and the language and theme switches; the footer only shows the version.
+
+### Added
+- App icon: favicon (SVG and PNG), icon for the home screen on iPhone and Android, web app manifest. Added to the home screen, BrainForge opens in the normal browser, so a login stays valid (preparation for profiles).
 
 ## [1.2.0] – 2026-10
 

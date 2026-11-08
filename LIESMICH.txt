@@ -1,7 +1,7 @@
-FLAGGENQUIZ EUROPA (CountryQuiz)
-================================
+BRAINFORGE (früher CountryQuiz / Flaggenquiz Europa)
+====================================================
 Die aktuelle Version steht unten auf jeder Seite (Datei version.php).
-Neue Versionen: https://github.com/laudatioUno/CountryQuiz/releases
+Neue Versionen: https://github.com/laudatioUno/BrainForge/releases
 
 Online-Übung mit zwei Spielarten:
 - Flaggen: Flagge erkennen, Land und Hauptstadt eintippen.
@@ -22,8 +22,8 @@ VORAUSSETZUNGEN
 
 INSTALLATION
 ------------
-1. countryquiz-<version>.zip von den Releases herunterladen, entpacken und
-   den Inhalt des Ordners "countryquiz" per FTP auf den Webspace laden
+1. brainforge-<version>.zip von den Releases herunterladen, entpacken und
+   den Inhalt des Ordners "brainforge" per FTP auf den Webspace laden
    (z. B. ins Hauptverzeichnis der Domain).
 2. Der Ordner "data" muss für PHP beschreibbar sein (meist automatisch so;
    sonst per FTP-Programm Rechte 755 oder 775 setzen).
@@ -54,6 +54,7 @@ lib.php          Länderdaten, Antwortprüfung, Datenbank
 config.php       Einstellungen
 style.css        Gestaltung
 flags/           Flaggen (SVG, neutrale Dateinamen)
+icons/           App-Symbol, Favicon, Manifest für den Home-Bildschirm
 umrisse/         Länderumrisse bzw. Kartenausschnitte (SVG, neutrale Dateinamen)
 
 

@@ -16,6 +16,9 @@ session_start();
  */
 const SPRACHEN = ['de' => 'Deutsch', 'fr' => 'Français'];
 
+const APP_NAME = 'BrainForge';
+const APP_REPO = 'https://github.com/laudatioUno/BrainForge';
+
 /**
  * Aktuelle Sprache: ?lang=… (wird gemerkt) › Cookie › Browser-Sprache › STANDARD_SPRACHE
  * Mit $setzen lässt sie sich fest einstellen (z. B. im Selbsttest).
@@ -877,14 +880,30 @@ function kopf(string $titel): void
         . ($thema !== 'auto' ? ' data-theme="' . $thema . '"' : '') . '><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="color-scheme" content="' . ['auto' => 'light dark', 'hell' => 'light', 'dunkel' => 'dark'][$thema] . '">'
-        . '<title>' . h($titel) . '</title><link rel="stylesheet" href="style.css"></head><body><main>';
+        . '<title>' . h($titel === APP_NAME ? $titel : $titel . ' · ' . APP_NAME) . '</title>'
+        . '<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">'
+        . '<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">'
+        . '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">'
+        . '<link rel="manifest" href="icons/manifest.webmanifest">'
+        . '<meta name="theme-color" content="#1f4fa3">'
+        . '<meta name="apple-mobile-web-app-title" content="' . APP_NAME . '">'
+        . '<link rel="stylesheet" href="style.css"></head><body>'
+        . '<header class="app-kopf"><a class="app-marke" href="index.php">'
+        . '<img src="icons/icon.svg" alt="" width="32" height="32"><span>' . APP_NAME . '</span></a>'
+        . '<div class="kopf-rechts">' . kopf_rechts() . umschalter() . '</div></header>'
+        . '<main>';
+}
+
+/** Platz rechts in der Kopfzeile vor den Umschaltern (z. B. für das Profil). */
+function kopf_rechts(): string
+{
+    return '';
 }
 
 function fuss(): void
 {
     echo '</main><footer class="app-footer">'
-        . umschalter()
-        . '<a href="https://github.com/laudatioUno/CountryQuiz/releases" rel="noopener">CountryQuiz ' . h(APP_VERSION) . '</a>'
+        . '<a href="' . APP_REPO . '/releases" rel="noopener">' . APP_NAME . ' ' . h(APP_VERSION) . '</a>'
         . '</footer></body></html>';
 }
 

@@ -1,6 +1,6 @@
-# CountryQuiz
+# BrainForge
 
-Quiz to learn countries, flags and outlines – the 46 countries of Europe with their capitals.
+Learning games for school, made to run on any web host: the 46 countries of Europe with their flags, outlines and capitals (and, from version 2.0, the multiplication tables).
 Made for exam preparation at school (7th grade): pupils practise on their phone or computer, one question at a time, with immediate feedback and the correction. The quiz is available in **German and French**; pupils switch the language on the start page or in the footer.
 
 ## Features
@@ -18,6 +18,7 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 - Public rankings per game type, level and length, top 5 on the start page, CSV export
 - German and French, including country and capital names and the answer checking; the choice is remembered, the browser language decides on the first visit
 - Dark mode: follows the device setting, or choose light/dark yourself
+- App icon and favicon; can be added to the home screen of a phone like an app
 - No login, no external services, no JavaScript framework
 
 ## Requirements
@@ -28,8 +29,8 @@ Made for exam preparation at school (7th grade): pupils practise on their phone 
 
 ## Installation
 
-1. Download `countryquiz-<version>.zip` from the [releases](../../releases).
-2. Unpack it and upload the contents of the folder `countryquiz/` to your web space (e.g. the web root of the domain).
+1. Download `brainforge-<version>.zip` from the [releases](../../releases).
+2. Unpack it and upload the contents of the folder `brainforge/` to your web space (e.g. the web root of the domain).
 3. Make sure `data/` is writable for PHP. The database is created with the first result.
 4. Open the site in the browser.
 
@@ -46,7 +47,7 @@ If you changed `config.php`, apply your changes again after uploading.
 ## Release
 
 1. In a pull request: raise `APP_VERSION` in `version.php` and add a section for the new version to `CHANGELOG.md`.
-2. Merge the pull request. The release is created **automatically**: the workflow sees the new version in `version.php`, runs the self test, builds `countryquiz-<version>.zip` and publishes the release (tag `v<version>`) with the changelog section as release notes.
+2. Merge the pull request. The release is created **automatically**: the workflow sees the new version in `version.php`, runs the self test, builds `brainforge-<version>.zip` and publishes the release (tag `v<version>`) with the changelog section as release notes.
    A merge that does not change `version.php`, or changes it without a new version, creates no release.
 3. Manually, if ever needed: **Actions › Release › Run workflow** with the version (e.g. `1.1.0`).
 
