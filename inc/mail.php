@@ -27,10 +27,11 @@ function mail_senden(string $an, string $betreff, string $text): ?string
         'Message-ID' => '<' . bin2hex(random_bytes(12)) . '@' . (substr(strrchr($absender, '@') ?: '@brainforge', 1)) . '>',
         'MIME-Version' => '1.0',
         'Content-Type' => 'text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding' => 'base64',
+        // Quoted-Printable: der Text bleibt lesbar. Base64 für reinen Text werten Spamfilter negativ.
+        'Content-Transfer-Encoding' => 'quoted-printable',
         'Auto-Submitted' => 'auto-generated',
     ];
-    $koerper = rtrim(chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $text)), 76, "\r\n"));
+    $koerper = quoted_printable_encode(str_replace(["\r\n", "\r", "\n"], ["\n", "\n", "\r\n"], $text));
 
     if ($e['mail_art'] === 'php') {
         $zeilen = [];
@@ -129,7 +130,7 @@ function smtp_senden(array $e, string $von, string $an, string $daten): void
         $senden('RCPT TO:<' . $an . '>', [250, 251]);
         $senden('DATA', [354]);
         // Zeilen, die mit einem Punkt beginnen, verdoppeln (SMTP-Regel)
-        $daten = preg_replace('/^\./m', '..', str_replace(["\r\n", "\n"], ["\n", "\r\n"], $daten));
+        $daten = preg_replace('/^\./m', '..', str_replace(["\r\n", "\n"], ["\n", "\r\n"], rtrim($daten, "\r\n")));
         $senden($daten . "\r\n.", [250]);
         $senden('QUIT', [221]);
     } finally {

@@ -111,7 +111,11 @@ if (!$gesperrt && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $testErgebnis = null;
 if (!$gesperrt && !empty($_SESSION['admin']) && isset($_GET['test'])) {
     $an = (string)$_GET['test'];
-    $fehlerText = mail_senden($an, t('BrainForge: Testmail'), t('Der Mailversand von BrainForge funktioniert.') . "\n\n" . basis_url() . "\n");
+    $fehlerText = mail_senden($an, t('BrainForge: Die Mail-Einstellungen funktionieren'), t('Hallo') . "\n\n"
+        . t('Diese Mail wurde im Admin-Bereich von BrainForge verschickt. Sie bestätigt, dass die Mail-Einstellungen stimmen und BrainForge Mails versenden kann, zum Beispiel die persönlichen Links für die Profile.') . "\n\n"
+        . t('Seite:') . ' ' . basis_url() . "\n"
+        . t('Verschickt am:') . ' ' . date('d.m.Y H:i') . "\n\n"
+        . t('Du musst nichts weiter tun.') . "\n");
     $testErgebnis = $fehlerText === null ? [true, t('Testmail an {email} verschickt.', ['email' => $an])] : [false, $fehlerText];
 }
 
