@@ -3,6 +3,24 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [1.4.0] – 2026-11
+
+### Added
+- **Profiles** – anyone can create one: nickname, e-mail address (e.g. of a parent) and a funny monster icon drawn at random (*Neu würfeln* rolls a new one). No password: each profile has a **personal link**, shown once on the screen with instructions for the home screen (iPhone and Android) and sent by e-mail. Opening the link logs the device in, and it stays logged in.
+- The profile counts for all games: flags and outlines are saved with the profile, and the rankings show the profile icon. Rounds without a profile still count and are marked *Gast*.
+- After a guest round: **Profil erstellen und Runde übernehmen** – the new profile takes over the round just played.
+- *Link vergessen?*: enter the e-mail address and get a new link for every profile with that address. The old link stops working and all devices are logged out. The answer never reveals whether an address exists.
+- Profile page: last rounds, number of logged-in devices, new icon, new link (keeps this device, logs out the others), log out.
+- **Admin area** (`admin.php`, password `ADMIN_PASSWORT` in `config.php`; locked as long as it is `bitte-aendern`): all profiles with e-mail, created, last login, rounds and devices; send a new link, rename, delete (with its rounds).
+- **Mail settings in the admin area**: SMTP (STARTTLS, SSL or none, with login) or PHP `mail()`, sender, address of the site for the links, test mail. Stored in `data/einstellungen.php`, not in the code, so an update does not overwrite them.
+
+### Security
+- Only SHA-256 hashes of personal links and device keys are stored. Device cookie: `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS.
+- Limits against misuse: creating profiles, requesting links, opening links and admin logins are rate-limited; all forms carry a CSRF token.
+
+### Changed
+- The database update (*Update nötig* › GO) adds the tables for profiles and devices; all results are kept.
+
 ## [1.3.0] – 2026-11
 
 ### Changed

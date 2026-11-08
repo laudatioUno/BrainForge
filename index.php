@@ -7,8 +7,13 @@ $fehler = '';
 [$spielart, $stufe, $modus] = $_SESSION['letzte_kombi'] ?? ['flaggen', '', 'kurz'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim((string)($_POST['name'] ?? ''));
-    $name = mb_substr(preg_replace('/\s+/u', ' ', $name) ?? '', 0, 40);
+    $profil = profil();
+    if ($profil !== null) {
+        $name = $profil['name'];
+    } else {
+        $name = trim((string)($_POST['name'] ?? ''));
+        $name = mb_substr(preg_replace('/\s+/u', ' ', $name) ?? '', 0, 40);
+    }
     [$spielart, $stufe, $modus] = kombi_aus($_POST);
 
     if ($name === '') {
@@ -29,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['quiz'] = [
             'token'    => bin2hex(random_bytes(16)),
             'name'     => $name,
+            'profil_id' => $profil !== null ? (int)$profil['id'] : null,
             'spielart' => $spielart,
             'stufe'    => $stufe,
             'modus'    => $modus,
@@ -38,7 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'pos'      => 0,      // aktuelle Frage
             'antworten' => [],    // geprüfte Antworten je Position
         ];
-        $_SESSION['letzter_name'] = $name;
+        if ($profil === null) {
+            $_SESSION['letzter_name'] = $name;
+        }
         $_SESSION['letzte_kombi'] = [$spielart, $stufe, $modus];
         header('Location: quiz.php');
         exit;
@@ -64,9 +72,14 @@ kopf(APP_NAME);
 
 <form method="post" class="karte start" id="startform">
   <?php if ($fehler): ?><p class="meldung"><?= h($fehler) ?></p><?php endif; ?>
-  <label for="name"><?= h(t('Dein Name')) ?></label>
+  <?php if ($ich = profil()): ?>
+  <p class="spielt-als"><?= avatar_svg($ich['avatar'], 36) ?> <span><?= h(t('Du spielst als')) ?> <strong><?= h($ich['name']) ?></strong></span></p>
+  <?php else: ?>
+  <label for="name"><?= h(t('Dein Name')) ?> <span class="leise">· <?= h(t('als Gast')) ?></span></label>
   <input id="name" name="name" maxlength="40" required autocomplete="off"
          value="<?= h($_POST['name'] ?? $_SESSION['letzter_name'] ?? '') ?>">
+  <small class="leise"><?= h(t('Mit einem Profil merkt sich BrainForge deine Runden.')) ?> <a href="profil-neu.php"><?= h(t('Profil erstellen')) ?></a></small>
+  <?php endif; ?>
 
   <fieldset>
     <legend><?= h(t('Was willst du üben?')) ?></legend>
@@ -137,7 +150,7 @@ kopf(APP_NAME);
 <section class="bestenliste" id="bestenliste">
   <div class="bl-kopf">
     <h2><?= h(t('Bestenliste')) ?></h2>
-    <a class="sekundaer" href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?>""><?= h(t('Alle Ergebnisse')) ?> →</a>
+    <a class="sekundaer" href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?>"><?= h(t('Alle Ergebnisse')) ?> →</a>
   </div>
   <nav class="chips" aria-label="<?= h(t('Bestenliste wählen')) ?>">
     <?php foreach (['flaggen' => t('Flaggen'), 'leicht' => t('Umrisse') . ' · ' . t('Leicht'), 'mittel' => t('Umrisse') . ' · ' . t('Mittel'), 'schwer' => t('Umrisse') . ' · ' . t('Schwer')] as $k => $titel): ?>
@@ -155,7 +168,7 @@ kopf(APP_NAME);
         <?php foreach ($top as $z): ?>
           <li>
             <span class="rang"><?= ['', '🥇', '🥈', '🥉'][(int)$z['rang']] ?? (int)$z['rang'] . '.' ?></span>
-            <span class="bl-name"><?= h($z['name']) ?></span>
+            <span class="bl-name"><?= spieler_name($z) ?></span>
             <span class="bl-wert"><?= number_format((float)$z['prozent'], 1, '.', '') ?> % · <?= h(dauer((int)$z['dauer_sek'])) ?></span>
           </li>
         <?php endforeach; ?>

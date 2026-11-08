@@ -39,6 +39,39 @@ Läuft der Hoster mit nginx, kann man in config.php bei DB_DATEI einen Pfad
 ausserhalb des öffentlichen Webordners angeben.
 
 
+PROFILE
+-------
+Alle können ein Profil erstellen: Spitzname, E-Mail-Adresse (z. B. der
+Eltern) und ein zufälliges Monster-Icon ("Neu würfeln" für ein anderes).
+Es gibt kein Passwort: Jedes Profil hat einen persönlichen Link. Er wird
+nach dem Erstellen einmal angezeigt (mit Anleitung für den Home-Bildschirm)
+und per Mail geschickt. Wer den Link öffnet, ist auf diesem Gerät angemeldet
+und bleibt es, bis er sich abmeldet.
+
+- Das Profil gilt für alle Spiele; die Ranglisten zeigen das Profil-Icon.
+  Ohne Profil kann man weiterhin als Gast spielen ("Gast" in der Rangliste).
+- Nach einer Gast-Runde: "Profil erstellen und Runde übernehmen".
+- "Link vergessen?": E-Mail eingeben, es kommt ein neuer Link für jedes
+  Profil mit dieser Adresse. Der alte Link geht nicht mehr, alle Geräte
+  werden abgemeldet.
+- Gespeichert werden nur Prüfsummen (Hashes) der Links, nie die Links selbst.
+
+ADMIN-BEREICH UND MAILVERSAND
+-----------------------------
+1. In config.php ein eigenes ADMIN_PASSWORT eintragen. Solange dort
+   'bitte-aendern' steht, ist der Admin-Bereich gesperrt.
+2. https://deine-domain.ch/admin.php aufrufen und anmelden.
+3. Unter "Mail-Einstellungen" die Angaben des Webhosters eintragen
+   (SMTP-Server, Port, Verschlüsselung, Benutzer, Passwort, Absender) und
+   "Speichern und Testmail senden" klicken.
+   Die Einstellungen liegen in data/einstellungen.php (geschützt wie die
+   Datenbank) und bleiben bei einem Update erhalten.
+Im Admin-Bereich: alle Profile mit E-Mail, letzter Anmeldung, Anzahl Runden
+und Geräten; neuen Link senden, umbenennen, löschen (mit den Runden).
+Ohne Mailversand funktionieren Profile trotzdem: der Link steht nach dem
+Erstellen auf dem Bildschirm.
+
+
 DATEIEN
 -------
 index.php        Startseite: Name eingeben, Kurz oder Komplett wählen
@@ -49,6 +82,12 @@ auswertung.php   Gesamtauswertung am Schluss, speichert das Resultat in der DB
                  und zeigt den Platz in der Rangliste
 ergebnisse.php   Öffentliche Ranglisten (Kurz / Komplett), Suche nach Name,
                  Details je Durchgang, CSV-Export für Excel
+profil-neu.php   Profil erstellen, persönlichen Link anzeigen
+profil.php       Eigenes Profil: letzte Runden, neuer Link, Abmelden
+anmelden.php     Ziel des persönlichen Links (meldet das Gerät an)
+link-vergessen.php  Neuen Link per Mail anfordern
+admin.php        Admin-Bereich: Profile, Mail-Einstellungen
+inc/             Profile, Mailversand, Icons, Einstellungen (geschützt)
 version.php      Versionsnummer (wird in der Fusszeile angezeigt)
 lib.php          Länderdaten, Antwortprüfung, Datenbank
 config.php       Einstellungen
@@ -93,9 +132,11 @@ Jedes Feld gibt 1 Punkt: Kurz = 30 Punkte, Komplett = 92 Punkte.
 
 DATENBANK
 ---------
-Tabelle "resultate": id, zeit, name, modus, anzahl, land_richtig,
-haupt_richtig, punkte, max_punkte, prozent, dauer_sek, details (JSON mit
-allen Eingaben pro Flagge).
+Tabelle "resultate": id, zeit, name, spielart, stufe, modus, anzahl,
+land_richtig, haupt_richtig, punkte, max_punkte, prozent, dauer_sek,
+details (JSON mit allen Eingaben pro Frage), profil_id (leer = Gast).
+Tabelle "profile": Spitzname, E-Mail, Icon, Hash des persönlichen Links,
+erstellt, letzte Anmeldung. Tabelle "geraete": angemeldete Geräte.
 
 
 RANGLISTE
@@ -134,13 +175,16 @@ UPDATE VON EINER ÄLTEREN VERSION
 2. Die Seite aufrufen: Es erscheint "Update nötig" mit dem Knopf GO.
 3. GO klicken. Vorher wird automatisch eine Sicherungskopie
    (data/resultate-sicherung-DATUM.sqlite) angelegt. Die bisherigen
-   Resultate bleiben erhalten und zählen als Spielart "Flaggen".
+   Resultate bleiben erhalten.
+4. Hast du config.php angepasst (z. B. ADMIN_PASSWORT), die Änderung
+   nach dem Hochladen wieder eintragen. Die Mail-Einstellungen liegen in
+   data/ und bleiben erhalten.
 Solange das Update nicht gemacht ist, führt jede Seite zur Update-Seite.
 Bei einer neuen Installation ist kein Update nötig.
 
-Was das Update ändert: Die Tabelle "resultate" bekommt die Spalten
-"spielart" (flaggen/umrisse) und "stufe" (leicht/mittel/schwer).
-Die Versionsnummer steht in der Datenbank (PRAGMA user_version = 2).
+Was die Updates ändern: Version 2 ergänzt "spielart" und "stufe",
+Version 3 die Tabellen für Profile und Geräte und die Spalte "profil_id".
+Die Versionsnummer steht in der Datenbank (PRAGMA user_version).
 
 
 UMRISSE

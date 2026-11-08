@@ -27,10 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $punkte = $lr + $hr;
 
     $st = db()->prepare('INSERT INTO resultate
-        (zeit, name, spielart, stufe, modus, anzahl, land_richtig, haupt_richtig, punkte, max_punkte, prozent, dauer_sek, details)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        (zeit, name, profil_id, spielart, stufe, modus, anzahl, land_richtig, haupt_richtig, punkte, max_punkte, prozent, dauer_sek, details)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
     $st->execute([
-        date('Y-m-d H:i:s'), $q['name'], $spielart, $umrisse ? ($q['stufe'] ?? '') : '', $q['modus'], $anzahl, $lr, $hr, $punkte, $max,
+        date('Y-m-d H:i:s'), $q['name'], $q['profil_id'] ?? null, $spielart, $umrisse ? ($q['stufe'] ?? '') : '', $q['modus'], $anzahl, $lr, $hr, $punkte, $max,
         round($punkte / $max * 100, 1), time() - $q['start'],
         json_encode($details, JSON_UNESCAPED_UNICODE),
     ]);
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ---- Resultat anzeigen ----
 $id = (int)($_GET['id'] ?? 0);
-$st = db()->prepare('SELECT * FROM resultate WHERE id = ?');
+$st = db()->prepare('SELECT r.*, COALESCE(p.name, r.name) AS name FROM resultate r LEFT JOIN profile p ON p.id = r.profil_id WHERE r.id = ?');
 $st->execute([$id]);
 $r = $st->fetch();
 if (!$r) {
@@ -60,7 +60,11 @@ foreach ($liste as $z) {
         break;
     }
 }
-$eigenes = in_array($id, $_SESSION['meine'] ?? [], true);
+$ich = profil();
+$eigenes = in_array($id, $_SESSION['meine'] ?? [], true)
+    || ($ich !== null && (int)$r['profil_id'] === (int)$ich['id']);
+// Gast-Runde auf diesem Gerät: Profil erstellen und Runde übernehmen
+$uebernehmen = $ich === null && $r['profil_id'] === null && in_array($id, $_SESSION['meine'] ?? [], true);
 $details = json_decode($r['details'], true);
 $p = (float)$r['prozent'];
 $lob = $p >= 95 ? t('Hervorragend!') : ($p >= 80 ? t('Sehr gut!') : ($p >= 60 ? t('Gut gemacht, weiter üben!') : t('Da geht noch mehr, übe die roten Felder nochmals.')));
@@ -98,6 +102,16 @@ kopf(t('Auswertung'));
     <div><dt><?= h(t('Zeit')) ?></dt><dd><?= h(dauer((int)$r['dauer_sek'])) ?></dd></div>
   </dl>
 </section>
+
+<?php if ($uebernehmen): ?>
+<section class="karte uebernehmen">
+  <div>
+    <strong><?= h(t('Diese Runde behalten?')) ?></strong>
+    <small><?= h(t('Erstelle ein Profil – die Runde wird gleich übernommen, und BrainForge merkt sich, was du schon kannst.')) ?></small>
+  </div>
+  <a class="knopf" href="profil-neu.php?zurueck=<?= rawurlencode('auswertung.php?id=' . $id) ?>"><?= h(t('Profil erstellen und Runde übernehmen')) ?></a>
+</section>
+<?php endif; ?>
 
 <section class="karte platzierung">
   <div class="platz">

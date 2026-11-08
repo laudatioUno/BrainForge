@@ -17,3 +17,7 @@ const DB_DATEI = __DIR__ . '/data/resultate.sqlite';
 
 // Sprache, wenn weder der Browser noch eine frühere Wahl etwas anderes sagt: 'de' oder 'fr'
 const STANDARD_SPRACHE = 'de';
+
+// Passwort für den Admin-Bereich (admin.php). UNBEDINGT ÄNDERN!
+// Solange hier 'bitte-aendern' steht, bleibt der Admin-Bereich gesperrt.
+const ADMIN_PASSWORT = 'bitte-aendern';
