@@ -12,6 +12,9 @@ The section of a version is used as the release notes on GitHub.
 - Start page: the leaderboard chips are *1×1 · Blitz* and *1×1 · Alle*; the columns show bis 10, 12 and 15 side by side. Old links (`bl=e10` …) open *Blitz*.
 - The 1×1 tab on the results page opens *Blitz* first.
 
+### Fixed
+- After an update, browsers could keep the old `style.css` from their cache, so new parts of a page appeared unstyled. The stylesheet link now carries the version (`style.css?v=…`), so every update loads the new one.
+
 ## [2.0.1] – 2026-11
 
 ### Fixed
