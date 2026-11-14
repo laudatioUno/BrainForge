@@ -3,6 +3,11 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [2.0.1] – 2026-11
+
+### Fixed
+- Results page: the numbers in the 1×1 tabs counted *Nur was nötig ist* rounds too, although they have no ranking. A tab could show «bis 10 · 9» over an empty ranking. The numbers now count only the rounds in the rankings (*Alle* and *Blitz*).
+
 ## [2.0.0] – 2026-11
 
 The 1×1 is complete: three ways to practise, real spaced repetition, daily goal and more statistics.

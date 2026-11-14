@@ -44,12 +44,14 @@ if (isset($_GET['csv'])) {
     exit;
 }
 
-// Anzahl Resultate je Spielart, Stufe und Umfang (für die Zahlen in den Reitern)
+// Anzahl Resultate je Spielart, Stufe und Umfang (für die Zahlen in den Reitern).
+// Gezählt wird nur, was in einer Rangliste steht: «Nur was nötig ist» beim 1×1 hat keine.
 $zahl = ['flaggen' => 0, 'umrisse' => 0, 'einmaleins' => 0];
 $zahlStufe = [];
 $modi = $spielart === 'einmaleins' ? ['alle', 'blitz'] : ['kurz', 'komplett'];
 $zahlModus = array_fill_keys($modi, 0);
-foreach (db()->query('SELECT spielart, stufe, modus, COUNT(*) AS n FROM resultate GROUP BY spielart, stufe, modus') as $g) {
+foreach (db()->query("SELECT spielart, stufe, modus, COUNT(*) AS n FROM resultate
+    WHERE NOT (spielart = 'einmaleins' AND modus NOT IN ('alle', 'blitz')) GROUP BY spielart, stufe, modus") as $g) {
     $zahl[$g['spielart']] = ($zahl[$g['spielart']] ?? 0) + (int)$g['n'];
     if ($g['spielart'] === $spielart) {
         $zahlStufe[$g['stufe']] = ($zahlStufe[$g['stufe']] ?? 0) + (int)$g['n'];
