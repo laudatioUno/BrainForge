@@ -588,3 +588,46 @@ tr.wiederholung td { opacity: .8; }
   .tagesziel { grid-template-columns: 1fr auto; }
   .tagesziel .ziel-balken { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* ---- Ranglisten 1×1: Art als Hauptkategorie, Bereich darunter ---- */
+.art-karten { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 20px 0 16px; }
+.art-karte {
+  display: flex; align-items: center; gap: 14px; min-height: 88px; padding: 16px 18px; box-sizing: border-box;
+  border: 2px solid var(--linie); border-radius: 14px; background: var(--karte); color: var(--text); text-decoration: none;
+}
+.art-karte:hover { border-color: var(--akzent); }
+.art-karte.aktiv { border-color: var(--akzent); background: var(--akzent-hell); }
+.art-icon { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--bg); color: var(--akzent-text); }
+.art-karte.aktiv .art-icon { background: var(--akzent); color: var(--auf-akzent); }
+.art-text { display: grid; gap: 2px; min-width: 0; }
+.art-text strong { font-size: 1.2rem; }
+.art-karte.aktiv strong { color: var(--akzent-text); }
+.art-zahl { font-size: .85rem; color: var(--leise); margin-left: 4px; }
+.art-text small { color: var(--leise); font-size: .88rem; }
+.rangliste-karte { padding: 18px 20px; display: grid; gap: 14px; }
+.rl-kopf { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rl-kopf h2 { margin: 0; font-size: 1.15rem; }
+.pillen { display: inline-flex; gap: 4px; padding: 4px; border-radius: 99px; background: var(--bg); }
+.pillen a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 99px;
+  color: var(--leise); text-decoration: none; font-weight: 600; font-size: .92rem;
+}
+.pillen a span { font-size: .78rem; font-weight: 500; padding: 1px 7px; border-radius: 99px; background: var(--gedaempft-knopf); }
+.pillen a.aktiv { background: var(--karte); color: var(--akzent-text); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.pillen a.aktiv span { background: var(--akzent-hell); color: var(--akzent-text); }
+.rl-leer { display: grid; justify-items: center; gap: 8px; padding: 32px 16px; text-align: center; border: 1px dashed var(--linie); border-radius: 12px; }
+.rl-leer .knopf { margin-top: 6px; }
+.rl-fuss { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rl-fuss .klein { margin: 0; }
+.rl-fuss .filter { margin: 0; }
+.hinweis-info { margin-top: 14px; }
+.bl-spalten.drei { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+@media (max-width: 520px) {
+  .art-karten { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .art-karte { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+  .art-icon { width: 36px; height: 36px; }
+  .art-zahl { display: block; margin: 0; }
+  .art-text small { display: none; }
+  .pillen { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; border-radius: 12px; }
+  .pillen a { justify-content: center; border-radius: 9px; padding: 0 6px; }
+}

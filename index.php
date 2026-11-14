@@ -101,15 +101,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Bestenliste: welche Kombination wird gezeigt? (flaggen, leicht/mittel/schwer, e10/e12/e15)
-$bl = $_GET['bl'] ?? match ($spielart) { 'umrisse' => $stufe, 'einmaleins' => 'e' . $stufe, default => 'flaggen' };
-$einmaleinsListen = array_map(fn($n) => 'e' . $n, EINMALEINS_BIS);
-if ($bl !== 'flaggen' && !isset(STUFEN[$bl]) && !in_array($bl, $einmaleinsListen, true)) {
+// Bestenliste: welche wird gezeigt? (flaggen, leicht/mittel/schwer, 1×1: eblitz/ealle)
+// Beim 1×1 ist die Art (Blitz, Alle) die Hauptauswahl; die Spalten sind die Bereiche bis 10/12/15.
+$bl = $_GET['bl'] ?? match ($spielart) { 'umrisse' => $stufe, 'einmaleins' => $modus === 'alle' ? 'ealle' : 'eblitz', default => 'flaggen' };
+if (in_array($bl, ['e10', 'e12', 'e15'], true)) {
+    $bl = 'eblitz'; // alte Links
+}
+if ($bl !== 'flaggen' && !isset(STUFEN[$bl]) && !in_array($bl, ['eblitz', 'ealle'], true)) {
     $bl = 'flaggen';
 }
 $blSpielart = $bl === 'flaggen' ? 'flaggen' : (isset(STUFEN[$bl]) ? 'umrisse' : 'einmaleins');
-$blStufe = $bl === 'flaggen' ? '' : ($blSpielart === 'umrisse' ? $bl : substr($bl, 1));
-$blModi = $blSpielart === 'einmaleins' ? ['alle', 'blitz'] : ['kurz', 'komplett'];
+$blStufe = $bl === 'flaggen' ? '' : ($blSpielart === 'umrisse' ? $bl : (string)EINMALEINS_BIS[0]);
+// Spalten: [Spielart, Stufe, Umfang, Titel]
+if ($blSpielart === 'einmaleins') {
+    $blArt = substr($bl, 1);
+    $blSpalten = array_map(fn($n) => ['einmaleins', (string)$n, $blArt, t('bis {n}', ['n' => $n])], EINMALEINS_BIS);
+} else {
+    $blSpalten = array_map(fn($m) => [$blSpielart, $blStufe, $m, modus_name($m)], ['kurz', 'komplett']);
+}
 $bereich = $spielart === 'einmaleins' ? (int)array_search((int)$stufe, EINMALEINS_BIS, true) : 0;
 $tempo = $spielart === 'einmaleins' ? $modus : 'noetig';
 // Mit Profil: wie viele Aufgaben heute nötig sind (je Bereich) und das Tagesziel
@@ -279,22 +288,21 @@ kopf(APP_NAME);
 <section class="bestenliste" id="bestenliste">
   <div class="bl-kopf">
     <h2><?= h(t('Bestenliste')) ?></h2>
-    <a class="sekundaer" href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?>"><?= h(t('Alle Ergebnisse')) ?> →</a>
+    <a class="sekundaer" href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?><?= $blSpielart === 'einmaleins' ? '&amp;modus=' . h($blArt) : '' ?>"><?= h(t('Alle Ergebnisse')) ?> →</a>
   </div>
   <nav class="chips" aria-label="<?= h(t('Bestenliste wählen')) ?>">
     <?php
     $chips = ['flaggen' => t('Flaggen'), 'leicht' => t('Umrisse') . ' · ' . t('Leicht'), 'mittel' => t('Umrisse') . ' · ' . t('Mittel'), 'schwer' => t('Umrisse') . ' · ' . t('Schwer')];
-    foreach (EINMALEINS_BIS as $n) {
-        $chips['e' . $n] = t('1×1') . ' · ' . t('bis {n}', ['n' => $n]);
-    }
+    $chips['eblitz'] = t('1×1') . ' · ' . t('Blitz');
+    $chips['ealle'] = t('1×1') . ' · ' . t('Alle');
     foreach ($chips as $k => $titel): ?>
       <a href="?bl=<?= $k ?>#bestenliste" class="<?= $bl === $k ? 'aktiv' : '' ?>"<?= $bl === $k ? ' aria-current="true"' : '' ?>><?= h($titel) ?></a>
     <?php endforeach; ?>
   </nav>
-  <div class="bl-spalten">
-  <?php foreach ($blModi as $m): $top = array_slice(rangliste($blSpielart, $blStufe, $m), 0, 5); ?>
+  <div class="bl-spalten<?= count($blSpalten) === 3 ? ' drei' : '' ?>">
+  <?php foreach ($blSpalten as [$sp, $st, $m, $titel]): $top = array_slice(rangliste($sp, $st, $m), 0, 5); ?>
     <div class="karte bl">
-      <h3><?= modus_name($m) ?></h3>
+      <h3><?= h($titel) ?></h3>
       <?php if (!$top): ?>
         <p class="leer"><?= h(t('Noch keine Ergebnisse.')) ?></p>
       <?php else: ?>
@@ -303,14 +311,14 @@ kopf(APP_NAME);
           <li>
             <span class="rang"><?= ['', '🥇', '🥈', '🥉'][(int)$z['rang']] ?? (int)$z['rang'] . '.' ?></span>
             <span class="bl-name"><?= spieler_name($z) ?></span>
-            <span class="bl-wert"><?= ist_blitz($blSpielart, $m)
+            <span class="bl-wert"><?= ist_blitz($sp, $m)
                 ? h(t('{n} richtig', ['n' => (int)$z['punkte']])) . ' · ' . number_format((float)$z['prozent'], 0, '.', '') . ' %'
                 : number_format((float)$z['prozent'], 1, '.', '') . ' % · ' . h(dauer((int)$z['dauer_sek'])) ?></span>
           </li>
         <?php endforeach; ?>
         </ol>
       <?php endif; ?>
-      <a href="ergebnisse.php?spielart=<?= $blSpielart ?>&amp;stufe=<?= h($blStufe) ?>&amp;modus=<?= $m ?>"><?= h(t('Ganze Rangliste')) ?></a>
+      <a href="ergebnisse.php?spielart=<?= $sp ?>&amp;stufe=<?= h($st) ?>&amp;modus=<?= $m ?>"><?= h(t('Ganze Rangliste')) ?></a>
     </div>
   <?php endforeach; ?>
   </div>

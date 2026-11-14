@@ -1037,7 +1037,8 @@ function kopf(string $titel): void
         . '<link rel="manifest" href="appicon/manifest.webmanifest">'
         . '<meta name="theme-color" content="#1f4fa3">'
         . '<meta name="apple-mobile-web-app-title" content="' . APP_NAME . '">'
-        . '<link rel="stylesheet" href="style.css"></head><body>'
+        // ?v= ändert sich mit jeder Version, damit der Browser nach einem Update das neue Stylesheet lädt
+        . '<link rel="stylesheet" href="style.css?v=' . h(APP_VERSION . '-' . (@filemtime(__DIR__ . '/style.css') ?: 0)) . '"></head><body>'
         . '<header class="app-kopf"><a class="app-marke" href="index.php">'
         . '<img src="appicon/icon.svg" alt="" width="32" height="32"><span>' . APP_NAME . '</span></a>'
         . '<div class="kopf-rechts">' . kopf_rechts() . umschalter() . '</div></header>'
