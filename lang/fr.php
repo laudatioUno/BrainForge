@@ -288,7 +288,6 @@ return [
         'Runde abbrechen' => 'Abandonner la partie',
         'bis {n}' => 'jusqu’à {n}',
         'Bereich' => 'Plage',
-        '1×1 Blitz: sortiert nach Anzahl richtig, bei Gleichstand zählt die bessere Quote.' => 'Livrets éclair: trié par nombre de réponses justes; en cas d’égalité, le meilleur taux l’emporte.',
         'Üben mit BrainForge' => 'S’entraîner avec BrainForge',
         'Flaggen und Umrisse erkennen, Länder und Hauptstädte lernen – und das 1×1 trainieren.' => 'Reconnaître drapeaux et contours, apprendre pays et capitales – et réviser les livrets.',
         'Malrechnen im Kopf, schnell und sicher' => 'Multiplier de tête, vite et juste',
@@ -384,6 +383,18 @@ return [
         'Zielstrebig' => 'Persévérant',
         'An 10 Tagen das Tagesziel erreicht' => 'Objectif du jour atteint 10 jours',
         'Tauschaufgaben gemeinsam, Tagesziel' => 'Calculs inversés regroupés, objectif du jour',
+        // Ranglisten 1×1
+        '60 Sekunden – wer schafft am meisten?' => '60 secondes – qui en fait le plus?',
+        'Jede Aufgabe einmal – Quote, dann Zeit' => 'Chaque calcul une fois – taux, puis temps',
+        'Art der Rangliste' => 'Type de classement',
+        '{n} Runden' => '{n} parties',
+        'Noch niemand in dieser Rangliste.' => 'Personne dans ce classement pour l’instant.',
+        'Starte eine Blitz-Runde bis {n} und sei die oder der Erste.' => 'Lance une partie Éclair jusqu’à {n} et sois le premier ou la première.',
+        'Rechne alle {anzahl} Aufgaben bis {n} und sei die oder der Erste.' => 'Fais les {anzahl} calculs jusqu’à {n} et sois le premier ou la première.',
+        '{art} bis {n} spielen' => 'Jouer {art} jusqu’à {n}',
+        'Sortiert nach Anzahl richtig, bei Gleichstand zählt die bessere Quote.' => 'Trié par nombre de bonnes réponses; en cas d’égalité, le meilleur taux compte.',
+        'Sortiert nach Quote, bei Gleichstand zählt die kürzere Zeit.' => 'Trié par taux; en cas d’égalité, le temps le plus court compte.',
+        '«Nur was nötig ist» hat keine Rangliste – dort bekommt jedes Kind andere Aufgaben. Diese Runden siehst du in deiner Statistik.' => '«Seulement le nécessaire» n’a pas de classement – chaque enfant y reçoit d’autres calculs. Tu vois ces parties dans tes statistiques.',
     ],
 
     'laender' => [

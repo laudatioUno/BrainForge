@@ -3,6 +3,15 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [2.1.0] – 2026-11
+
+### Changed
+- **1×1 rankings: the kind comes first, then the range.** On the results page two large cards, *Blitz* and *Alle*, are the main choice (with the number of rounds); below them a switch *bis 10 / bis 12 / bis 15* picks the range, and the heading says exactly which ranking is shown («Blitz · bis 10»).
+- An empty 1×1 ranking explains what to play and links straight to it («Blitz bis 12 spielen»).
+- The results page says that *Nur was nötig ist* has no ranking and where those rounds are.
+- Start page: the leaderboard chips are *1×1 · Blitz* and *1×1 · Alle*; the columns show bis 10, 12 and 15 side by side. Old links (`bl=e10` …) open *Blitz*.
+- The 1×1 tab on the results page opens *Blitz* first.
+
 ## [2.0.1] – 2026-11
 
 ### Fixed
