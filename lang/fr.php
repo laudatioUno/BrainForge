@@ -395,6 +395,7 @@ return [
         'Sortiert nach Anzahl richtig, bei Gleichstand zählt die bessere Quote.' => 'Trié par nombre de bonnes réponses; en cas d’égalité, le meilleur taux compte.',
         'Sortiert nach Quote, bei Gleichstand zählt die kürzere Zeit.' => 'Trié par taux; en cas d’égalité, le temps le plus court compte.',
         '«Nur was nötig ist» hat keine Rangliste – dort bekommt jedes Kind andere Aufgaben. Diese Runden siehst du in deiner Statistik.' => '«Seulement le nécessaire» n’a pas de classement – chaque enfant y reçoit d’autres calculs. Tu vois ces parties dans tes statistiques.',
+        'Letzte Ziffer löschen' => 'Effacer le dernier chiffre',
     ],
 
     'laender' => [

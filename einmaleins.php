@@ -151,8 +151,17 @@ kopf(t('1×1'));
       <input id="ergebnis" name="ergebnis" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus
              enterkeyhint="go" spellcheck="false" aria-label="<?= h(t('Ergebnis von {a} mal {b}', ['a' => (int)$auf['a'], 'b' => (int)$auf['b']])) ?>">
     </label>
-    <button type="submit"><?= h(t('Prüfen')) ?></button>
+    <button type="submit" class="pruefen-knopf"><?= h(t('Prüfen')) ?></button>
   </form>
+  <?php // Zahlenfeld für Handys und Tablets: grosse Tasten und «Prüfen» gleich daneben, ohne Handy-Tastatur ?>
+  <div class="zahlenfeld" id="zahlenfeld" hidden>
+    <?php foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $z): ?>
+      <button type="button" data-ziffer="<?= $z ?>"><?= $z ?></button>
+    <?php endforeach; ?>
+    <button type="button" data-loeschen="1" class="zf-loeschen" aria-label="<?= h(t('Letzte Ziffer löschen')) ?>"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9l6 6M18 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" data-ziffer="0">0</button>
+    <button type="button" data-senden="1" class="zf-senden"><?= h(t('Prüfen')) ?></button>
+  </div>
   <?php if ($blitz): ?>
     <form method="post" id="fertig">
       <input type="hidden" name="token" value="<?= h($r['token']) ?>">
@@ -164,17 +173,40 @@ kopf(t('1×1'));
 <p class="klein"><a href="index.php" onclick="return confirm(<?= h(json_encode(t('Runde abbrechen? Es wird nichts gespeichert.'), JSON_UNESCAPED_UNICODE)) ?>)"><?= h(t('Runde abbrechen')) ?></a></p>
 <script>
 (function () {
-  var feld = document.getElementById('ergebnis');
+  var feld = document.getElementById('ergebnis'), form = document.getElementById('rechnung');
   // Nur Ziffern; Fokus bleibt im Feld, auch nach einem Tipp daneben
   feld.addEventListener('input', function () { feld.value = feld.value.replace(/\D/g, ''); });
   feld.focus();
+
+  // Touch-Geräte: eigenes Zahlenfeld statt Handy-Tastatur (die Zahlentastatur hat keine Senden-Taste)
+  var zahlenfeld = document.getElementById('zahlenfeld');
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    zahlenfeld.hidden = false;
+    document.body.classList.add('mit-zahlenfeld');
+    feld.setAttribute('inputmode', 'none'); // keine Handy-Tastatur
+    feld.focus();
+    zahlenfeld.addEventListener('pointerdown', function (e) { if (e.target.closest('button')) e.preventDefault(); });
+    zahlenfeld.addEventListener('click', function (e) {
+      var taste = e.target.closest('button');
+      if (!taste) return;
+      if (taste.hasAttribute('data-ziffer') && feld.value.length < 4) {
+        feld.value += taste.getAttribute('data-ziffer');
+      } else if (taste.hasAttribute('data-loeschen')) {
+        feld.value = feld.value.slice(0, -1);
+      } else if (taste.hasAttribute('data-senden') && feld.value !== '') {
+        if (form.requestSubmit) { form.requestSubmit(); }
+        else if (form.dispatchEvent(new Event('submit', { cancelable: true }))) { form.submit(); } // ältere Safari
+      }
+      if (navigator.vibrate) navigator.vibrate(8);
+    });
+  }
 
   /*
    * Antworten ohne Neuladen der Seite: Das Eingabefeld bleibt dasselbe und behält den Fokus,
    * so bleibt die Handy-Tastatur offen. Nur Rückmeldung, Aufgabe und Fortschritt werden ersetzt.
    * Ohne fetch (sehr alte Browser) wird das Formular normal abgeschickt.
    */
-  var form = document.getElementById('rechnung'), unterwegs = false;
+  var unterwegs = false;
   function tauschen(neu, id) {
     var alt = document.getElementById(id), ersatz = neu.getElementById(id);
     if (alt && ersatz) { alt.innerHTML = ersatz.innerHTML; }

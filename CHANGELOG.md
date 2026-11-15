@@ -3,7 +3,11 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
-## [2.1.1] – 2026-11
+## [2.2.0] – 2026-11
+
+### Added
+- **Number pad for phones and tablets** in 1×1 rounds: big keys 0–9, delete and **Prüfen** right next to them, at thumb height. The phone's own keyboard stays closed (its number keyboard has no send key, so you had to reach up to the *Prüfen* button). It also removes the extra tap into the field at the start of a round. Computers keep the normal keyboard; the pad shows only on touch screens.
+- During a round on a phone the page is more compact: language and theme switches and the page title are hidden, so task and pad fit on the screen.
 
 ### Fixed
 - 1×1 on phones: after each answer the keyboard closed and you had to tap the answer field again. Answers are now sent without reloading the page: the answer field keeps the focus, so the keyboard stays open from task to task (also after tapping *Prüfen*). Feedback, task and progress are updated in place; the end of the round still opens the result page. Without JavaScript the form works as before.

@@ -631,3 +631,30 @@ tr.wiederholung td { opacity: .8; }
   .pillen { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; border-radius: 12px; }
   .pillen a { justify-content: center; border-radius: 9px; padding: 0 6px; }
 }
+
+/* ---- 1×1: Zahlenfeld für Touch-Geräte ---- */
+.zahlenfeld { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 360px; margin: 6px auto 0; }
+.zahlenfeld[hidden] { display: none; }
+.zahlenfeld button {
+  min-height: 58px; padding: 0; font-size: 1.6rem; font-weight: 700; border-radius: 12px;
+  background: var(--karte); color: var(--text); border: 1px solid var(--linie); box-shadow: 0 1px 0 var(--linie);
+  touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.zahlenfeld button:active { background: var(--akzent-hell); transform: translateY(1px); }
+.zahlenfeld .zf-loeschen { display: grid; place-items: center; color: var(--leise); }
+.zahlenfeld .zf-senden { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); font-size: 1.15rem; }
+.zahlenfeld .zf-senden:active { background: var(--akzent); filter: brightness(1.1); }
+.mit-zahlenfeld .pruefen-knopf { display: none; }
+.mit-zahlenfeld .rechnung input { caret-color: transparent; }
+@media (max-width: 520px) {
+  /* Während der Runde zählt nur die Aufgabe: Sprache/Design und Titel ausblenden, alles kompakter */
+  .mit-zahlenfeld .umschalter-leiste, .mit-zahlenfeld header.leiste { display: none; }
+  .mit-zahlenfeld .app-kopf { margin-bottom: 8px; }
+  .mit-zahlenfeld .fortschritt { margin-top: 0; }
+  .mit-zahlenfeld .rechnen { padding: 12px 14px 14px; margin-top: 10px; }
+  .mit-zahlenfeld .rechnung-form { gap: 6px; }
+  .mit-zahlenfeld .rechnung { font-size: clamp(1.9rem, 9vw, 2.6rem); flex-wrap: nowrap; }
+  .mit-zahlenfeld .rechnung input { width: 2.6em; }
+  .mit-zahlenfeld .rueck { margin: 0 0 6px; font-size: .92rem; }
+  .mit-zahlenfeld .zahlenfeld button { min-height: 54px; }
+}
