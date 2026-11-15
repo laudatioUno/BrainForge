@@ -3,6 +3,11 @@
 All notable changes to BrainForge (formerly CountryQuiz). Versions follow [semantic versioning](https://semver.org/).
 The section of a version is used as the release notes on GitHub.
 
+## [2.1.1] – 2026-11
+
+### Fixed
+- 1×1 on phones: after each answer the keyboard closed and you had to tap the answer field again. Answers are now sent without reloading the page: the answer field keeps the focus, so the keyboard stays open from task to task (also after tapping *Prüfen*). Feedback, task and progress are updated in place; the end of the round still opens the result page. Without JavaScript the form works as before.
+
 ## [2.1.0] – 2026-11
 
 ### Changed

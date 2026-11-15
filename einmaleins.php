@@ -113,7 +113,7 @@ kopf(t('1×1'));
   <span><?= h($r['name']) ?> · <?= h(kombi_name('einmaleins', (string)$r['bis'], $r['modus'])) ?></span>
 </header>
 
-<div class="fortschritt">
+<div class="fortschritt" id="fortschritt">
   <?php if ($blitz): ?>
     <span><?= h(t('Noch')) ?> <strong id="uhr" data-ende="<?= (int)round(($r['ende'] - microtime(true)) * 1000) ?>"><?= sprintf('%d:%02d', intdiv($rest, 60), $rest % 60) ?></strong></span>
     <span><?= h(t('Richtig')) ?>: <strong><?= $richtig ?></strong></span>
@@ -125,6 +125,7 @@ kopf(t('1×1'));
 <div class="balken"><span style="width: <?= $blitz ? round($rest / BLITZ_SEKUNDEN * 100, 1) : round(count($gezaehlt) / max(1, $gesamt) * 100, 1) ?>%"></span></div>
 
 <section class="karte einzel rechnen">
+  <div id="rueckmeldung">
   <?php if (!empty($r['auffrischen']) && $pos === 0): ?>
     <p class="hinweis-ok"><?= h(t('Heute ist nichts fällig – super! Hier ein paar Aufgaben zum Auffrischen.')) ?></p>
   <?php endif; ?>
@@ -138,14 +139,15 @@ kopf(t('1×1'));
       <?php endif; ?>
     </p>
   <?php endif; ?>
+  </div>
 
   <form method="post" autocomplete="off" class="rechnung-form" id="rechnung">
     <input type="hidden" name="token" value="<?= h($r['token']) ?>">
     <input type="hidden" name="pos" value="<?= $pos ?>">
     <input type="hidden" name="aktion" value="antwort">
-    <?php if (!empty($auf['w'])): ?><span class="nochmals-chip"><?= h(t('Nochmals')) ?></span><?php endif; ?>
+    <span id="chip"><?php if (!empty($auf['w'])): ?><span class="nochmals-chip"><?= h(t('Nochmals')) ?></span><?php endif; ?></span>
     <label class="rechnung" for="ergebnis">
-      <span><?= (int)$auf['a'] ?> × <?= (int)$auf['b'] ?> =</span>
+      <span id="aufgabe"><?= (int)$auf['a'] ?> × <?= (int)$auf['b'] ?> =</span>
       <input id="ergebnis" name="ergebnis" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus
              enterkeyhint="go" spellcheck="false" aria-label="<?= h(t('Ergebnis von {a} mal {b}', ['a' => (int)$auf['a'], 'b' => (int)$auf['b']])) ?>">
     </label>
@@ -166,12 +168,57 @@ kopf(t('1×1'));
   // Nur Ziffern; Fokus bleibt im Feld, auch nach einem Tipp daneben
   feld.addEventListener('input', function () { feld.value = feld.value.replace(/\D/g, ''); });
   feld.focus();
+
+  /*
+   * Antworten ohne Neuladen der Seite: Das Eingabefeld bleibt dasselbe und behält den Fokus,
+   * so bleibt die Handy-Tastatur offen. Nur Rückmeldung, Aufgabe und Fortschritt werden ersetzt.
+   * Ohne fetch (sehr alte Browser) wird das Formular normal abgeschickt.
+   */
+  var form = document.getElementById('rechnung'), unterwegs = false;
+  function tauschen(neu, id) {
+    var alt = document.getElementById(id), ersatz = neu.getElementById(id);
+    if (alt && ersatz) { alt.innerHTML = ersatz.innerHTML; }
+  }
+  if (window.fetch && window.DOMParser && window.FormData) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      feld.focus(); // noch im Tipp: hält die Tastatur offen, auch nach einem Tipp auf «Prüfen»
+      if (unterwegs || feld.value === '') return;
+      unterwegs = true;
+      var daten = new FormData(form);
+      fetch(form.action || location.href, { method: 'POST', body: daten, credentials: 'same-origin' })
+        .then(function (antwort) {
+          if (!/einmaleins\.php/.test(antwort.url)) { location.href = antwort.url; return null; } // Runde fertig
+          return antwort.text();
+        })
+        .then(function (html) {
+          if (html === null) return;
+          var neu = new DOMParser().parseFromString(html, 'text/html');
+          var neuesForm = neu.getElementById('rechnung');
+          if (!neuesForm) { location.reload(); return; }
+          ['token', 'pos'].forEach(function (n) { form.elements[n].value = neuesForm.elements[n].value; });
+          tauschen(neu, 'rueckmeldung');
+          tauschen(neu, 'chip');
+          tauschen(neu, 'aufgabe');
+          tauschen(neu, 'fortschritt');
+          var balkenNeu = neu.querySelector('.balken span');
+          if (!uhr && balkenNeu) { document.querySelector('.balken span').style.width = balkenNeu.style.width; }
+          feld.setAttribute('aria-label', neu.getElementById('ergebnis').getAttribute('aria-label'));
+          feld.value = '';
+          unterwegs = false;
+          feld.focus();
+        })
+        .catch(function () { form.submit(); });
+    });
+  }
+
   var uhr = document.getElementById('uhr');
   if (!uhr) return;
   var ende = Date.now() + parseInt(uhr.getAttribute('data-ende'), 10);
   var balken = document.querySelector('.balken span');
   (function tick() {
     var rest = Math.max(0, ende - Date.now()), s = Math.ceil(rest / 1000);
+    uhr = document.getElementById('uhr') || uhr; // nach einer Antwort neu eingesetzt
     uhr.textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
     balken.style.width = (rest / <?= BLITZ_SEKUNDEN * 1000 ?> * 100) + '%';
     if (rest <= 0) {
