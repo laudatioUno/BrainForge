@@ -113,7 +113,7 @@ kopf(t('1×1'));
   <span><?= h($r['name']) ?> · <?= h(kombi_name('einmaleins', (string)$r['bis'], $r['modus'])) ?></span>
 </header>
 
-<div class="fortschritt">
+<div class="fortschritt" id="fortschritt">
   <?php if ($blitz): ?>
     <span><?= h(t('Noch')) ?> <strong id="uhr" data-ende="<?= (int)round(($r['ende'] - microtime(true)) * 1000) ?>"><?= sprintf('%d:%02d', intdiv($rest, 60), $rest % 60) ?></strong></span>
     <span><?= h(t('Richtig')) ?>: <strong><?= $richtig ?></strong></span>
@@ -125,6 +125,7 @@ kopf(t('1×1'));
 <div class="balken"><span style="width: <?= $blitz ? round($rest / BLITZ_SEKUNDEN * 100, 1) : round(count($gezaehlt) / max(1, $gesamt) * 100, 1) ?>%"></span></div>
 
 <section class="karte einzel rechnen">
+  <div id="rueckmeldung">
   <?php if (!empty($r['auffrischen']) && $pos === 0): ?>
     <p class="hinweis-ok"><?= h(t('Heute ist nichts fällig – super! Hier ein paar Aufgaben zum Auffrischen.')) ?></p>
   <?php endif; ?>
@@ -138,19 +139,29 @@ kopf(t('1×1'));
       <?php endif; ?>
     </p>
   <?php endif; ?>
+  </div>
 
   <form method="post" autocomplete="off" class="rechnung-form" id="rechnung">
     <input type="hidden" name="token" value="<?= h($r['token']) ?>">
     <input type="hidden" name="pos" value="<?= $pos ?>">
     <input type="hidden" name="aktion" value="antwort">
-    <?php if (!empty($auf['w'])): ?><span class="nochmals-chip"><?= h(t('Nochmals')) ?></span><?php endif; ?>
+    <span id="chip"><?php if (!empty($auf['w'])): ?><span class="nochmals-chip"><?= h(t('Nochmals')) ?></span><?php endif; ?></span>
     <label class="rechnung" for="ergebnis">
-      <span><?= (int)$auf['a'] ?> × <?= (int)$auf['b'] ?> =</span>
+      <span id="aufgabe"><?= (int)$auf['a'] ?> × <?= (int)$auf['b'] ?> =</span>
       <input id="ergebnis" name="ergebnis" inputmode="numeric" pattern="[0-9]*" maxlength="4" required autofocus
              enterkeyhint="go" spellcheck="false" aria-label="<?= h(t('Ergebnis von {a} mal {b}', ['a' => (int)$auf['a'], 'b' => (int)$auf['b']])) ?>">
     </label>
-    <button type="submit"><?= h(t('Prüfen')) ?></button>
+    <button type="submit" class="pruefen-knopf"><?= h(t('Prüfen')) ?></button>
   </form>
+  <?php // Zahlenfeld für Handys und Tablets: grosse Tasten und «Prüfen» gleich daneben, ohne Handy-Tastatur ?>
+  <div class="zahlenfeld" id="zahlenfeld" hidden>
+    <?php foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $z): ?>
+      <button type="button" data-ziffer="<?= $z ?>"><?= $z ?></button>
+    <?php endforeach; ?>
+    <button type="button" data-loeschen="1" class="zf-loeschen" aria-label="<?= h(t('Letzte Ziffer löschen')) ?>"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9l6 6M18 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" data-ziffer="0">0</button>
+    <button type="button" data-senden="1" class="zf-senden"><?= h(t('Prüfen')) ?></button>
+  </div>
   <?php if ($blitz): ?>
     <form method="post" id="fertig">
       <input type="hidden" name="token" value="<?= h($r['token']) ?>">
@@ -162,16 +173,84 @@ kopf(t('1×1'));
 <p class="klein"><a href="index.php" onclick="return confirm(<?= h(json_encode(t('Runde abbrechen? Es wird nichts gespeichert.'), JSON_UNESCAPED_UNICODE)) ?>)"><?= h(t('Runde abbrechen')) ?></a></p>
 <script>
 (function () {
-  var feld = document.getElementById('ergebnis');
+  var feld = document.getElementById('ergebnis'), form = document.getElementById('rechnung');
   // Nur Ziffern; Fokus bleibt im Feld, auch nach einem Tipp daneben
   feld.addEventListener('input', function () { feld.value = feld.value.replace(/\D/g, ''); });
   feld.focus();
+
+  // Touch-Geräte: eigenes Zahlenfeld statt Handy-Tastatur (die Zahlentastatur hat keine Senden-Taste)
+  var zahlenfeld = document.getElementById('zahlenfeld');
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    zahlenfeld.hidden = false;
+    document.body.classList.add('mit-zahlenfeld');
+    feld.setAttribute('inputmode', 'none'); // keine Handy-Tastatur
+    feld.focus();
+    zahlenfeld.addEventListener('pointerdown', function (e) { if (e.target.closest('button')) e.preventDefault(); });
+    zahlenfeld.addEventListener('click', function (e) {
+      var taste = e.target.closest('button');
+      if (!taste) return;
+      if (taste.hasAttribute('data-ziffer') && feld.value.length < 4) {
+        feld.value += taste.getAttribute('data-ziffer');
+      } else if (taste.hasAttribute('data-loeschen')) {
+        feld.value = feld.value.slice(0, -1);
+      } else if (taste.hasAttribute('data-senden') && feld.value !== '') {
+        if (form.requestSubmit) { form.requestSubmit(); }
+        else if (form.dispatchEvent(new Event('submit', { cancelable: true }))) { form.submit(); } // ältere Safari
+      }
+      if (navigator.vibrate) navigator.vibrate(8);
+    });
+  }
+
+  /*
+   * Antworten ohne Neuladen der Seite: Das Eingabefeld bleibt dasselbe und behält den Fokus,
+   * so bleibt die Handy-Tastatur offen. Nur Rückmeldung, Aufgabe und Fortschritt werden ersetzt.
+   * Ohne fetch (sehr alte Browser) wird das Formular normal abgeschickt.
+   */
+  var unterwegs = false;
+  function tauschen(neu, id) {
+    var alt = document.getElementById(id), ersatz = neu.getElementById(id);
+    if (alt && ersatz) { alt.innerHTML = ersatz.innerHTML; }
+  }
+  if (window.fetch && window.DOMParser && window.FormData) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      feld.focus(); // noch im Tipp: hält die Tastatur offen, auch nach einem Tipp auf «Prüfen»
+      if (unterwegs || feld.value === '') return;
+      unterwegs = true;
+      var daten = new FormData(form);
+      fetch(form.action || location.href, { method: 'POST', body: daten, credentials: 'same-origin' })
+        .then(function (antwort) {
+          if (!/einmaleins\.php/.test(antwort.url)) { location.href = antwort.url; return null; } // Runde fertig
+          return antwort.text();
+        })
+        .then(function (html) {
+          if (html === null) return;
+          var neu = new DOMParser().parseFromString(html, 'text/html');
+          var neuesForm = neu.getElementById('rechnung');
+          if (!neuesForm) { location.reload(); return; }
+          ['token', 'pos'].forEach(function (n) { form.elements[n].value = neuesForm.elements[n].value; });
+          tauschen(neu, 'rueckmeldung');
+          tauschen(neu, 'chip');
+          tauschen(neu, 'aufgabe');
+          tauschen(neu, 'fortschritt');
+          var balkenNeu = neu.querySelector('.balken span');
+          if (!uhr && balkenNeu) { document.querySelector('.balken span').style.width = balkenNeu.style.width; }
+          feld.setAttribute('aria-label', neu.getElementById('ergebnis').getAttribute('aria-label'));
+          feld.value = '';
+          unterwegs = false;
+          feld.focus();
+        })
+        .catch(function () { form.submit(); });
+    });
+  }
+
   var uhr = document.getElementById('uhr');
   if (!uhr) return;
   var ende = Date.now() + parseInt(uhr.getAttribute('data-ende'), 10);
   var balken = document.querySelector('.balken span');
   (function tick() {
     var rest = Math.max(0, ende - Date.now()), s = Math.ceil(rest / 1000);
+    uhr = document.getElementById('uhr') || uhr; // nach einer Antwort neu eingesetzt
     uhr.textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
     balken.style.width = (rest / <?= BLITZ_SEKUNDEN * 1000 ?> * 100) + '%';
     if (rest <= 0) {
